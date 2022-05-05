@@ -118,11 +118,11 @@ var ringCreateCmd = &cobra.Command{
 
 		ring, err := client.CreateRing(request)
 		if err != nil {
-			return errors.Wrap(err, "failed to create ring")
+			return errors.Wrapf(err, "failed to create ring %s", request.Name)
 		}
 
 		if err = printJSON(ring); err != nil {
-			return errors.Wrap(err, "failed to print ring response")
+			return errors.Wrapf(err, "failed to print ring %s response", request.Name)
 		}
 
 		return nil
@@ -171,11 +171,11 @@ var ringUpdateCmd = &cobra.Command{
 
 		ring, err := client.UpdateRing(ringID, request)
 		if err != nil {
-			return errors.Wrap(err, "failed to update ring")
+			return errors.Wrapf(err, "failed to update ring %s", request.Name)
 		}
 
 		if err = printJSON(ring); err != nil {
-			return errors.Wrap(err, "failed to print ring response")
+			return errors.Wrapf(err, "failed to print ring %s response", request.Name)
 		}
 
 		return nil
@@ -215,11 +215,11 @@ var ringReleaseCmd = &cobra.Command{
 
 		ring, err := client.ReleaseRing(ringID, request)
 		if err != nil {
-			return errors.Wrap(err, "failed to release a ring")
+			return errors.Wrapf(err, "failed to release a ring %s", ringID)
 		}
 
 		if err = printJSON(ring); err != nil {
-			return errors.Wrap(err, "failed to print ring release response")
+			return errors.Wrapf(err, "failed to print ring %s release response", ringID)
 		}
 
 		return nil
@@ -243,7 +243,7 @@ var ringDeleteCmd = &cobra.Command{
 
 		err := client.DeleteRing(ringID)
 		if err != nil {
-			return errors.Wrap(err, "failed to delete ring")
+			return errors.Wrapf(err, "failed to delete ring %s", ringID)
 		}
 
 		return nil
@@ -266,14 +266,14 @@ var ringGetCmd = &cobra.Command{
 		ringID, _ := command.Flags().GetString("ring")
 		ring, err := client.GetRing(ringID)
 		if err != nil {
-			return errors.Wrap(err, "failed to query ring")
+			return errors.Wrapf(err, "failed to query ring %s", ringID)
 		}
 		if ring == nil {
 			return nil
 		}
 
 		if err = printJSON(ring); err != nil {
-			return errors.Wrap(err, "failed to print ring response")
+			return errors.Wrapf(err, "failed to print ring %s response", ringID)
 		}
 
 		return nil
@@ -329,7 +329,7 @@ var ringListCmd = &cobra.Command{
 		}
 
 		if err = printJSON(rings); err != nil {
-			return errors.Wrap(err, "failed to print ring response")
+			return errors.Wrap(err, "failed to print ring list response")
 		}
 
 		return nil
