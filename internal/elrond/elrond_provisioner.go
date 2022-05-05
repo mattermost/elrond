@@ -8,16 +8,16 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// ElrondProvisioner provisions release rings.
-type ElrondProvisioner struct {
+// ElProvisioner provisions release rings.
+type ElProvisioner struct {
 	logger log.FieldLogger
 }
 
 // NewElrondProvisioner creates a new ElrondProvisioner.
-func NewElrondProvisioner(logger log.FieldLogger) *ElrondProvisioner {
+func NewElrondProvisioner(logger log.FieldLogger) *ElProvisioner {
 	logger = logger.WithField("provisioner", "elrond")
 
-	return &ElrondProvisioner{
+	return &ElProvisioner{
 		logger: logger,
 	}
 }

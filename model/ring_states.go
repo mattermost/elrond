@@ -25,7 +25,7 @@ const (
 	RingStateReleaseRollbackRequested = "release-rollback-requested"
 	// RingStateReleaseRollbackComplete is a ring that the release rollback is complete.
 	RingStateReleaseRollbackComplete = "release-rollback-complete"
-	// RingStateDeletionFailed is a ring that the release rollback has failed.
+	// RingStateReleaseRollbackFailed is a ring that the release rollback has failed.
 	RingStateReleaseRollbackFailed = "release-rollback-failed"
 	// RingStateDeletionRequested is a ring in the process of being deleted.
 	RingStateDeletionRequested = "deletion-requested"
