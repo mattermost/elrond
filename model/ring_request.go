@@ -21,18 +21,17 @@ type CreateRingRequest struct {
 	SoakTime           int      `json:"soakTime,omitempty"`
 	Image              string   `json:"image,omitempty"`
 	Version            string   `json:"version,omitempty"`
-	APISecurityLock    bool     `json:"api-security-lock,omitempty"`
+	APISecurityLock    bool     `json:"apiSecurityLock,omitempty"`
 }
 
 // UpdateRingRequest specifies the parameters to update a ring.
 type UpdateRingRequest struct {
-	Name               string   `json:"name,omitempty"`
-	Priority           int      `json:"priority,omitempty"`
-	InstallationGroups []string `json:"installationGroups,omitempty"`
-	SoakTime           int      `json:"soakTime,omitempty"`
-	Image              string   `json:"image,omitempty"`
-	Version            string   `json:"version,omitempty"`
-	APISecurityLock    bool     `json:"api-security-lock,omitempty"`
+	Name            string `json:"name,omitempty"`
+	Priority        int    `json:"priority,omitempty"`
+	SoakTime        int    `json:"soakTime,omitempty"`
+	Image           string `json:"image,omitempty"`
+	Version         string `json:"version,omitempty"`
+	APISecurityLock bool   `json:"apiSecurityLock,omitempty"`
 }
 
 // SetDefaults sets the default values for a ring create request.

@@ -40,7 +40,11 @@ func (s *mockRingStore) UpdateRing(Ring *model.Ring) error {
 	return nil
 }
 
+<<<<<<< HEAD
 func (s *mockRingStore) CreateRing(Ring *model.Ring, installationGroups []*model.InstallationGroup) error {
+=======
+func (s *mockRingStore) CreateRing(Ring *model.Ring) error {
+>>>>>>> 8b13b36be702dd0bfddb6cb696e04893d2ab575c
 	return nil
 }
 
