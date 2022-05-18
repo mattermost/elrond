@@ -1,0 +1,6 @@
+elrond*.db
+coverage.out
+.vscode
+/.idea
+build/_output/
+bin/*
