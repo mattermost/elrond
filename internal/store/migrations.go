@@ -37,7 +37,7 @@ var migrations = []migration{
 				State TEXT NOT NULL,
 				Name TEXT NOT NULL,
 				Priority INT NOT NULL,
-				InstallationGroup STRING NULL,
+				InstallationGroup TEXT NULL,
 				Provisioner TEXT NOT NULL,
 				SoakTime INT NOT NULL,
 				Image TEXT NOT NULL,
