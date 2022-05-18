@@ -70,12 +70,14 @@ build:
 .PHONY: build-image
 build-image:  ## Build the docker image for Elrond
 	@echo Building Elrond Docker Image
+	echo $(DOCKER_PASSWORD) | docker login --username $(DOCKER_USERNAME) --password-stdin
 	docker buildx build \
 	--platform linux/arm64,linux/amd64 \
 	--build-arg DOCKER_BUILD_IMAGE=$(DOCKER_BUILD_IMAGE) \
 	--build-arg DOCKER_BASE_IMAGE=$(DOCKER_BASE_IMAGE) \
 	. -f build/Dockerfile -t $(ELROND_IMAGE) \
 	--no-cache \
+	--push
 
 .PHONY: build-image-with-tag
 build-image-with-tag:  ## Build the docker image for elrond
@@ -111,3 +113,7 @@ release:
 deps:
 	sudo apt update && sudo apt install hub git
 	go get k8s.io/release/cmd/release-notes
+
+.PHONY: unittest
+unittest:
+	$(GO) test ./... -v -covermode=count -coverprofile=coverage.out

@@ -45,10 +45,10 @@ func TestRingFromReader(t *testing.T) {
 
 	t.Run("request", func(t *testing.T) {
 		ring, err := RingFromReader(bytes.NewReader([]byte(
-			`{"ID":"id","InstallationGroup":"12345"}`,
+			`{"ID":"id"}`,
 		)))
 		require.NoError(t, err)
-		require.Equal(t, &Ring{ID: "id", InstallationGroup: "12345"}, ring)
+		require.Equal(t, &Ring{ID: "id"}, ring)
 	})
 }
 
@@ -71,12 +71,12 @@ func TestRingsFromReader(t *testing.T) {
 
 	t.Run("request", func(t *testing.T) {
 		ring, err := RingsFromReader(bytes.NewReader([]byte(
-			`[{"ID":"id1", "InstallationGroup":"12345"}, {"ID":"id2", "InstallationGroup":"123456"}]`,
+			`[{"ID":"id1", "InstallationGroups":"12345"}, {"ID":"id2", "InstallationGroups":"123456"}]`,
 		)))
 		require.NoError(t, err)
 		require.Equal(t, []*Ring{
-			{ID: "id1", InstallationGroup: "12345"},
-			{ID: "id2", InstallationGroup: "123456"},
+			{ID: "id1", InstallationGroups: []*InstallationGroup{{Name: "12345"}}},
+			{ID: "id2", InstallationGroups: []*InstallationGroup{{Name: "12345"}}},
 		}, ring)
 	})
 }

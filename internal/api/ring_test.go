@@ -23,9 +23,9 @@ import (
 
 func TestRings(t *testing.T) {
 	logger := testlib.MakeLogger(t)
+
 	sqlStore := store.MakeTestSQLStore(t, logger)
 	defer store.CloseConnection(t, sqlStore)
-
 	router := mux.NewRouter()
 	api.Register(router, &api.Context{
 		Store:      sqlStore,
@@ -86,8 +86,8 @@ func TestRings(t *testing.T) {
 	})
 	t.Run("rings", func(t *testing.T) {
 		ring1, err := client.CreateRing(&model.CreateRingRequest{
-			Priority:          1,
-			InstallationGroup: "group-12345",
+			Priority:           1,
+			InstallationGroups: []string{"prod-12345", "prod-1234567"},
 		})
 		require.NoError(t, err)
 		require.NotNil(t, ring1)
@@ -97,15 +97,15 @@ func TestRings(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, ring1.ID, actualRing1.ID)
 		require.Equal(t, model.RingStateCreationRequested, actualRing1.State)
-		require.Equal(t, "group-12345", actualRing1.InstallationGroup)
+		require.Equal(t, "group-12345", actualRing1.InstallationGroups)
 		require.Equal(t, 7200, actualRing1.SoakTime)
 
 		time.Sleep(1 * time.Millisecond)
 
 		ring2, err := client.CreateRing(&model.CreateRingRequest{
-			Priority:          2,
-			InstallationGroup: "group-12345",
-			SoakTime:          3600,
+			Priority:           2,
+			InstallationGroups: []string{"prod-12345", "prod-1234567"},
+			SoakTime:           3600,
 		})
 		require.NoError(t, err)
 		require.NotNil(t, ring2)
@@ -114,16 +114,16 @@ func TestRings(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, ring2.ID, actualRing2.ID)
 		require.Equal(t, model.RingStateCreationRequested, actualRing2.State)
-		require.Equal(t, "group-12345", actualRing2.InstallationGroup)
+		require.Equal(t, "group-12345", actualRing2.InstallationGroups)
 		require.Equal(t, 2, actualRing2.Priority)
 		require.Equal(t, 3600, actualRing2.SoakTime)
 
 		time.Sleep(1 * time.Millisecond)
 
 		ring3, err := client.CreateRing(&model.CreateRingRequest{
-			Priority:          2,
-			InstallationGroup: "group-12345",
-			SoakTime:          3600,
+			Priority:           2,
+			InstallationGroups: []string{"prod-12345", "prod-1234567"},
+			SoakTime:           3600,
 		})
 		require.NoError(t, err)
 		require.NotNil(t, ring3)
@@ -290,31 +290,31 @@ func TestCreateRing(t *testing.T) {
 
 	t.Run("invalid priority", func(t *testing.T) {
 		_, err := client.CreateRing(&model.CreateRingRequest{
-			Priority:          0,
-			InstallationGroup: "group-12345",
-			SoakTime:          3600,
+			Priority:           0,
+			InstallationGroups: []string{"group-12345"},
+			SoakTime:           3600,
 		})
 		require.EqualError(t, err, "failed with status code 400")
 	})
 
 	t.Run("invalid installation group", func(t *testing.T) {
 		_, err := client.CreateRing(&model.CreateRingRequest{
-			Priority:          1,
-			InstallationGroup: "",
-			SoakTime:          3600,
+			Priority:           1,
+			InstallationGroups: []string{},
+			SoakTime:           3600,
 		})
 		require.EqualError(t, err, "failed with status code 400")
 	})
 
 	t.Run("valid", func(t *testing.T) {
 		ring, err := client.CreateRing(&model.CreateRingRequest{
-			Priority:          1,
-			InstallationGroup: "group-123",
-			SoakTime:          3600,
+			Priority:           1,
+			InstallationGroups: []string{"prod-12345", "prod-1234567"},
+			SoakTime:           3600,
 		})
 		require.NoError(t, err)
 		require.Equal(t, model.RingStateCreationRequested, ring.State)
-		require.Equal(t, "group-123", ring.InstallationGroup)
+		require.Equal(t, "group-123", ring.InstallationGroups)
 		require.Equal(t, 1, ring.Priority)
 		require.Equal(t, 3600, ring.SoakTime)
 	})
@@ -337,9 +337,9 @@ func TestRetryCreateRing(t *testing.T) {
 	client := model.NewClient(ts.URL)
 
 	ring1, err := client.CreateRing(&model.CreateRingRequest{
-		Priority:          1,
-		InstallationGroup: "group-123",
-		SoakTime:          3600,
+		Priority:           1,
+		InstallationGroups: []string{"prod-12345", "prod-1234567"},
+		SoakTime:           3600,
 	})
 	require.NoError(t, err)
 
@@ -421,9 +421,9 @@ func TestReleaseRing(t *testing.T) {
 	client := model.NewClient(ts.URL)
 
 	ring1, err := client.CreateRing(&model.CreateRingRequest{
-		Priority:          1,
-		InstallationGroup: "group-123",
-		SoakTime:          3600,
+		Priority:           1,
+		InstallationGroups: []string{"prod-12345", "prod-1234567"},
+		SoakTime:           3600,
 	})
 	require.NoError(t, err)
 
@@ -536,8 +536,8 @@ func TestDeleteRing(t *testing.T) {
 	client := model.NewClient(ts.URL)
 
 	ring1, err := client.CreateRing(&model.CreateRingRequest{
-		Priority:          1,
-		InstallationGroup: "group-12345",
+		Priority:           1,
+		InstallationGroups: []string{"prod-12345", "prod-1234567"},
 	})
 	require.NoError(t, err)
 

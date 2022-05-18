@@ -11,21 +11,21 @@ import (
 
 // Ring represents a deployment ring.
 type Ring struct {
-	ID                string
-	Name              string
-	Priority          int
-	InstallationGroup string
-	SoakTime          int
-	Image             string
-	Version           string
-	State             string
-	Provisioner       string
-	CreateAt          int64
-	DeleteAt          int64
-	ReleaseAt         int64
-	APISecurityLock   bool
-	LockAcquiredBy    *string
-	LockAcquiredAt    int64
+	ID                 string
+	Name               string
+	Priority           int
+	SoakTime           int
+	Image              string
+	Version            string
+	State              string
+	Provisioner        string
+	CreateAt           int64
+	DeleteAt           int64
+	ReleaseAt          int64
+	InstallationGroups []*InstallationGroup `json:"InstallationGroups,omitempty"`
+	APISecurityLock    bool
+	LockAcquiredBy     *string
+	LockAcquiredAt     int64
 }
 
 // RingRelease stores information neeeded for a ring release.
@@ -76,7 +76,15 @@ func RingsFromReader(reader io.Reader) ([]*Ring, error) {
 
 // RingFilter describes the parameters used to constrain a set of rings.
 type RingFilter struct {
-	Page           int
-	PerPage        int
-	IncludeDeleted bool
+	Paging
+	InstallationGroups *InstallationGroupsFilter
+	Page               int
+	PerPage            int
+	IncludeDeleted     bool
+}
+
+// InstallationGroupsFilter describes filter based on Installation Groups.
+type InstallationGroupsFilter struct {
+	// MatchAllIDs contains all Installation Group IDs which need to be set on a Ring for it to be included in the result.
+	MatchAllIDs []string
 }

@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/pkg/errors"
+
 	"github.com/mattermost/elrond/internal/webhook"
 	"github.com/mattermost/elrond/model"
 )
@@ -29,6 +31,8 @@ func initRing(apiRouter *mux.Router, context *Context) {
 	ringRouter.Handle("/update", addContext(handleUpdateRing)).Methods("POST")
 	ringRouter.Handle("/release", addContext(handleReleaseRing)).Methods("POST")
 	ringRouter.Handle("/release", addContext(handleRetryReleaseRing)).Methods("POST")
+	ringRouter.Handle("/installationgroups", addContext(handleRegisterRingInstallationGroups)).Methods("POST")
+	ringRouter.Handle("/installationgroup/{installation-group-name}", addContext(handleDeleteRingInstallationGroup)).Methods("DELETE")
 
 	ringRouter.Handle("", addContext(handleDeleteRing)).Methods("DELETE")
 }
@@ -100,18 +104,24 @@ func handleCreateRing(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	ring := model.Ring{
-		Name:              createRingRequest.Name,
-		Priority:          createRingRequest.Priority,
-		InstallationGroup: createRingRequest.InstallationGroup,
-		SoakTime:          createRingRequest.SoakTime,
-		Image:             createRingRequest.Image,
-		Version:           createRingRequest.Version,
-		Provisioner:       "elrond",
-		APISecurityLock:   createRingRequest.APISecurityLock,
-		State:             model.RingStateCreationRequested,
+		Name:            createRingRequest.Name,
+		Priority:        createRingRequest.Priority,
+		SoakTime:        createRingRequest.SoakTime,
+		Image:           createRingRequest.Image,
+		Version:         createRingRequest.Version,
+		Provisioner:     "elrond",
+		APISecurityLock: createRingRequest.APISecurityLock,
+		State:           model.RingStateCreationRequested,
 	}
 
-	if err = c.Store.CreateRing(&ring); err != nil {
+	installationGroups, err := model.InstallationGroupsFromStringSlice(createRingRequest.InstallationGroups)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to validate extra installation groups")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	if err = c.Store.CreateRing(&ring, installationGroups); err != nil {
 		c.Logger.WithError(err).Error("failed to create ring")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -230,10 +240,6 @@ func handleUpdateRing(c *Context, w http.ResponseWriter, r *http.Request) {
 
 	if updateRingRequest.SoakTime != ring.SoakTime && updateRingRequest.SoakTime != 0 {
 		ring.SoakTime = updateRingRequest.SoakTime
-	}
-
-	if updateRingRequest.InstallationGroup != "" {
-		ring.InstallationGroup = updateRingRequest.InstallationGroup
 	}
 
 	if updateRingRequest.Priority != ring.Priority && updateRingRequest.Priority != 0 {
@@ -428,4 +434,95 @@ func handleDeleteRing(c *Context, w http.ResponseWriter, r *http.Request) {
 	c.Supervisor.Do() //nolint
 
 	w.WriteHeader(http.StatusAccepted)
+}
+
+// handleRegisterRingInstallationGroups responds to POST /api/ring/{ring}/installationgroups,
+// registers the set of installation groups to the Ring.
+func handleRegisterRingInstallationGroups(c *Context, w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	ringID := vars["ring"]
+	c.Logger = c.Logger.WithField("ring", ringID).WithField("action", "register-ring-installation-groups")
+
+	ring, status, unlockOnce := lockRing(c, ringID)
+	if status != 0 {
+		w.WriteHeader(status)
+		return
+	}
+	defer unlockOnce()
+
+	if ring.APISecurityLock {
+		logSecurityLockConflict("ring", c.Logger)
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+
+	installationGroups, err := installationGroupsFromRequest(r)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to get installation groups from request")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	installationGroups, err = c.Store.CreateRingInstallationGroups(ringID, installationGroups)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to create ring installation groups")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	ring.InstallationGroups = append(ring.InstallationGroups, installationGroups...)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	outputJSON(c, w, ring)
+}
+
+// handleDeleteRingInstallationGroup responds to DELETE /api/ring/{ring}/installationgroup/{installation-group-name},
+// removes annotation from the Ring.
+func handleDeleteRingInstallationGroup(c *Context, w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	ringID := vars["ring"]
+	installationGroupName := vars["installation-group-name"]
+	c.Logger = c.Logger.
+		WithField("ring", ringID).
+		WithField("action", "delete-ring-installatio-group").
+		WithField("installation-group-name", installationGroupName)
+
+	ring, status, unlockOnce := lockRing(c, ringID)
+	if status != 0 {
+		w.WriteHeader(status)
+		return
+	}
+	defer unlockOnce()
+
+	if ring.APISecurityLock {
+		logSecurityLockConflict("ring", c.Logger)
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+
+	err := c.Store.DeleteRingInstallationGroup(ringID, installationGroupName)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed delete ring installation group")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func installationGroupsFromRequest(req *http.Request) ([]*model.InstallationGroup, error) {
+	installationGroupsRequest, err := model.NewRegisterInstallationGroupsRequestFromReader(req.Body)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to decode request")
+	}
+	defer req.Body.Close()
+
+	installationGroups, err := model.InstallationGroupsFromStringSlice(installationGroupsRequest.InstallationGroups)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to validate installation groups")
+	}
+
+	return installationGroups, nil
 }

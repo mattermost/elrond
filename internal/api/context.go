@@ -16,7 +16,7 @@ type Supervisor interface {
 
 // Store describes the interface required to persist changes made via API requests.
 type Store interface {
-	CreateRing(ring *model.Ring) error
+	CreateRing(ring *model.Ring, installationGroups []*model.InstallationGroup) error
 	GetRing(ringID string) (*model.Ring, error)
 	GetRings(filter *model.RingFilter) ([]*model.Ring, error)
 	UpdateRing(ring *model.Ring) error
@@ -25,6 +25,9 @@ type Store interface {
 	LockRingAPI(ringID string) error
 	UnlockRingAPI(ringID string) error
 	DeleteRing(ringID string) error
+
+	CreateRingInstallationGroups(ringID string, installationGroups []*model.InstallationGroup) ([]*model.InstallationGroup, error)
+	DeleteRingInstallationGroup(ringID string, installationGroups string) error
 
 	CreateWebhook(webhook *model.Webhook) error
 	GetWebhook(webhookID string) (*model.Webhook, error)

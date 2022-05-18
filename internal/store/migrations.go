@@ -37,7 +37,6 @@ var migrations = []migration{
 				State TEXT NOT NULL,
 				Name TEXT NOT NULL,
 				Priority INT NOT NULL,
-				InstallationGroup STRING NULL,
 				Provisioner TEXT NOT NULL,
 				SoakTime INT NOT NULL,
 				Image TEXT NOT NULL,
@@ -50,6 +49,32 @@ var migrations = []migration{
 				LockAcquiredAt BIGINT NOT NULL
 			);
 		`); err != nil {
+			return err
+		}
+
+		if _, err := e.Exec(`
+			CREATE TABLE InstallationGroup (
+				ID TEXT PRIMARY KEY,
+				Name TEXT NOT NULL UNIQUE
+			);
+		`); err != nil {
+			return err
+		}
+
+		if _, err := e.Exec(`
+			CREATE TABLE RingInstallationGroup (
+				ID TEXT PRIMARY KEY,
+				RingID TEXT NOT NULL,
+				InstallationGroupID TEXT NOT NULL
+			);
+		`); err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`
+			CREATE UNIQUE INDEX RingInstallationGroup_RingID_InstallationGroupID ON RingInstallationGroup (RingID, InstallationGroupID);
+		`)
+		if err != nil {
 			return err
 		}
 
