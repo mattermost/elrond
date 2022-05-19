@@ -12,6 +12,7 @@ import (
 
 func init() {
 	ringInstallationGroupRegisterCmd.Flags().StringArray("installation-group", []string{}, "Additional installation groups for the ring. Accepts multiple values, for example: '... --installation-group group-123 --installation-group group-1234'")
+
 	ringInstallationGroupRegisterCmd.Flags().String("ring", "", "The id of the ring to register the installation groups.")
 	ringInstallationGroupRegisterCmd.MarkFlagRequired("ring")
 	ringInstallationGroupRegisterCmd.MarkFlagRequired("installation-group")

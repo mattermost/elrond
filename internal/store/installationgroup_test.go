@@ -81,16 +81,6 @@ func TestInstallationGroups_Ring(t *testing.T) {
 		assert.True(t, model.ContainsInstallationGroup(installationGroupsForRing, &installationGroup2))
 	})
 
-	t.Run("get installation groups for rings", func(t *testing.T) {
-		installationGroupsForRings, err := sqlStore.GetInstallationGroupsForRings(&model.RingFilter{Paging: model.AllPagesNotDeleted()})
-		require.NoError(t, err)
-		assert.Equal(t, 2, len(installationGroupsForRings))
-		assert.True(t, model.ContainsInstallationGroup(installationGroupsForRings[ring1.ID], &installationGroup1))
-		assert.True(t, model.ContainsInstallationGroup(installationGroupsForRings[ring1.ID], &installationGroup2))
-		assert.True(t, model.ContainsInstallationGroup(installationGroupsForRings[ring2.ID], &installationGroup1))
-		assert.True(t, model.ContainsInstallationGroup(installationGroupsForRings[ring2.ID], &installationGroup2))
-	})
-
 	t.Run("delete ring installation group", func(t *testing.T) {
 		err = sqlStore.DeleteRingInstallationGroup(ring1.ID, installationGroup1.Name)
 		require.NoError(t, err)

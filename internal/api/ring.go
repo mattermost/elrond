@@ -33,7 +33,6 @@ func initRing(apiRouter *mux.Router, context *Context) {
 	ringRouter.Handle("/release", addContext(handleRetryReleaseRing)).Methods("POST")
 	ringRouter.Handle("/installationgroups", addContext(handleRegisterRingInstallationGroups)).Methods("POST")
 	ringRouter.Handle("/installationgroup/{installation-group-name}", addContext(handleDeleteRingInstallationGroup)).Methods("DELETE")
-
 	ringRouter.Handle("", addContext(handleDeleteRing)).Methods("DELETE")
 }
 
@@ -53,6 +52,15 @@ func handleGetRing(c *Context, w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
+
+	installationGroups, err := c.Store.GetInstallationGroupsForRing(ringID)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to get installation groups for ring")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	ring.InstallationGroups = installationGroups
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
@@ -80,8 +88,20 @@ func handleGetRings(c *Context, w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+
 	if rings == nil {
 		rings = []*model.Ring{}
+	}
+
+	installationGroups, err := c.Store.GetInstallationGroupsForRings(filter)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to get installation groups for ring")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	for _, r := range rings {
+		r.InstallationGroups = installationGroups[r.ID]
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -102,7 +122,6 @@ func handleCreateRing(c *Context, w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-
 	ring := model.Ring{
 		Name:            createRingRequest.Name,
 		Priority:        createRingRequest.Priority,
@@ -126,6 +145,8 @@ func handleCreateRing(c *Context, w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+
+	ring.InstallationGroups = installationGroups
 
 	webhookPayload := &model.WebhookPayload{
 		Type:      model.TypeRing,
@@ -442,7 +463,6 @@ func handleRegisterRingInstallationGroups(c *Context, w http.ResponseWriter, r *
 	vars := mux.Vars(r)
 	ringID := vars["ring"]
 	c.Logger = c.Logger.WithField("ring", ringID).WithField("action", "register-ring-installation-groups")
-
 	ring, status, unlockOnce := lockRing(c, ringID)
 	if status != 0 {
 		w.WriteHeader(status)

@@ -26,6 +26,8 @@ type Store interface {
 	UnlockRingAPI(ringID string) error
 	DeleteRing(ringID string) error
 
+	GetInstallationGroupsForRings(filter *model.RingFilter) (map[string][]*model.InstallationGroup, error)
+	GetInstallationGroupsForRing(ringID string) ([]*model.InstallationGroup, error)
 	CreateRingInstallationGroups(ringID string, installationGroups []*model.InstallationGroup) ([]*model.InstallationGroup, error)
 	DeleteRingInstallationGroup(ringID string, installationGroups string) error
 

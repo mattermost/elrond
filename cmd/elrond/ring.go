@@ -63,6 +63,7 @@ func init() {
 	ringCmd.AddCommand(ringDeleteCmd)
 	ringCmd.AddCommand(ringGetCmd)
 	ringCmd.AddCommand(ringListCmd)
+	ringCmd.AddCommand(ringInstallationGroupCmd)
 }
 
 var ringCmd = &cobra.Command{

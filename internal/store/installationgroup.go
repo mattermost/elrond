@@ -92,7 +92,6 @@ func (sqlStore *SQLStore) getOrCreateInstallationGroups(db dbInterface, installa
 		}
 		installationGroups[i] = installationGroup
 	}
-
 	return installationGroups, nil
 }
 
@@ -105,7 +104,7 @@ func (sqlStore *SQLStore) getOrCreateInstallationGroup(db dbInterface, installat
 		return fetched, nil
 	}
 
-	err = sqlStore.createInstallationGroup(sqlStore.db, installationGroup)
+	err = sqlStore.createInstallationGroup(db, installationGroup)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create installation group")
 	}
@@ -164,7 +163,7 @@ type ringInstallationGroup struct {
 	InstallationGroupName string
 }
 
-// GetInstallationGroupsForRings fetches all installation groups registered to the ring.
+// GetInstallationGroupsForRings fetches all installation groups registered to rings.
 func (sqlStore *SQLStore) GetInstallationGroupsForRings(filter *model.RingFilter) (map[string][]*model.InstallationGroup, error) {
 	var ringInstallationGroups []*ringInstallationGroup
 

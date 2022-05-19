@@ -86,8 +86,7 @@ func TestRings(t *testing.T) {
 	})
 	t.Run("rings", func(t *testing.T) {
 		ring1, err := client.CreateRing(&model.CreateRingRequest{
-			Priority:           1,
-			InstallationGroups: []string{"prod-12345", "prod-1234567"},
+			Priority: 1,
 		})
 		require.NoError(t, err)
 		require.NotNil(t, ring1)
@@ -97,15 +96,13 @@ func TestRings(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, ring1.ID, actualRing1.ID)
 		require.Equal(t, model.RingStateCreationRequested, actualRing1.State)
-		require.Equal(t, "group-12345", actualRing1.InstallationGroups)
 		require.Equal(t, 7200, actualRing1.SoakTime)
 
 		time.Sleep(1 * time.Millisecond)
 
 		ring2, err := client.CreateRing(&model.CreateRingRequest{
-			Priority:           2,
-			InstallationGroups: []string{"prod-12345", "prod-1234567"},
-			SoakTime:           3600,
+			Priority: 2,
+			SoakTime: 3600,
 		})
 		require.NoError(t, err)
 		require.NotNil(t, ring2)
@@ -114,16 +111,14 @@ func TestRings(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, ring2.ID, actualRing2.ID)
 		require.Equal(t, model.RingStateCreationRequested, actualRing2.State)
-		require.Equal(t, "group-12345", actualRing2.InstallationGroups)
 		require.Equal(t, 2, actualRing2.Priority)
 		require.Equal(t, 3600, actualRing2.SoakTime)
 
 		time.Sleep(1 * time.Millisecond)
 
 		ring3, err := client.CreateRing(&model.CreateRingRequest{
-			Priority:           2,
-			InstallationGroups: []string{"prod-12345", "prod-1234567"},
-			SoakTime:           3600,
+			Priority: 2,
+			SoakTime: 3600,
 		})
 		require.NoError(t, err)
 		require.NotNil(t, ring3)
@@ -297,24 +292,25 @@ func TestCreateRing(t *testing.T) {
 		require.EqualError(t, err, "failed with status code 400")
 	})
 
-	t.Run("invalid installation group", func(t *testing.T) {
-		_, err := client.CreateRing(&model.CreateRingRequest{
+	t.Run("nil installation group", func(t *testing.T) {
+		ring, err := client.CreateRing(&model.CreateRingRequest{
 			Priority:           1,
 			InstallationGroups: []string{},
 			SoakTime:           3600,
 		})
-		require.EqualError(t, err, "failed with status code 400")
+		require.NoError(t, err)
+		require.Equal(t, []*model.InstallationGroup([]*model.InstallationGroup(nil)), ring.InstallationGroups)
 	})
 
 	t.Run("valid", func(t *testing.T) {
 		ring, err := client.CreateRing(&model.CreateRingRequest{
 			Priority:           1,
-			InstallationGroups: []string{"prod-12345", "prod-1234567"},
+			InstallationGroups: []string{"prod-12345"},
 			SoakTime:           3600,
 		})
 		require.NoError(t, err)
 		require.Equal(t, model.RingStateCreationRequested, ring.State)
-		require.Equal(t, "group-123", ring.InstallationGroups)
+		require.Equal(t, "prod-12345", ring.InstallationGroups[0].Name)
 		require.Equal(t, 1, ring.Priority)
 		require.Equal(t, 3600, ring.SoakTime)
 	})
