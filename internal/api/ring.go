@@ -498,7 +498,7 @@ func handleRegisterRingInstallationGroups(c *Context, w http.ResponseWriter, r *
 }
 
 // handleDeleteRingInstallationGroup responds to DELETE /api/ring/{ring}/installationgroup/{installation-group-name},
-// removes annotation from the Ring.
+// removes installation group from the Ring.
 func handleDeleteRingInstallationGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	ringID := vars["ring"]
