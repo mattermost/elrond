@@ -6,7 +6,6 @@ package store
 
 import (
 	"database/sql"
-	"fmt"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/mattermost/elrond/model"
@@ -81,14 +80,6 @@ func (sqlStore *SQLStore) applyRingsFilter(builder sq.SelectBuilder, filter *mod
 
 	if !filter.IncludeDeleted {
 		builder = builder.Where("DeleteAt = 0")
-	}
-
-	if filter.InstallationGroups != nil && len(filter.InstallationGroups.MatchAllIDs) > 0 {
-		builder = builder.Join(fmt.Sprintf("%s ON Ring.ID=%s.RingID", ringInstallationGroupTable, ringInstallationGroupTable)).
-			// this where statement resolves to: ... WHERE RingInstallationGroup.InstallationGroupID IN ([ALL PROVIDED IDS])
-			Where(sq.Eq{fmt.Sprintf("%s.InstallationGroupID", ringInstallationGroupTable): filter.InstallationGroups.MatchAllIDs}).
-			GroupBy("Ring.ID").
-			Having(fmt.Sprintf("count(DISTINCT %s.InstallationGroupID) = ?", ringInstallationGroupTable), len(filter.InstallationGroups.MatchAllIDs))
 	}
 
 	return builder

@@ -202,32 +202,13 @@ func (sqlStore *SQLStore) DeleteRingInstallationGroup(ringID string, installatio
 		return nil
 	}
 
-	tx, err := sqlStore.beginCustomTransaction(sqlStore.db, &sql.TxOptions{Isolation: sql.LevelRepeatableRead})
-	if err != nil {
-		return errors.Wrap(err, "failed to begin the transaction")
-	}
-	defer tx.RollbackUnlessCommitted()
-
 	builder := sq.Delete(ringInstallationGroupTable).
 		Where("RingID = ?", ringID).
 		Where("InstallationGroupID = ?", installationGroup.ID)
 
-	result, err := sqlStore.execBuilder(tx, builder)
+	_, err = sqlStore.execBuilder(sqlStore.db, builder)
 	if err != nil {
 		return errors.Wrap(err, "failed to delete ring installation group")
-	}
-
-	rows, err := result.RowsAffected()
-	if err != nil {
-		return errors.Wrap(err, "failed to check affected rows when deleting ring installation group")
-	}
-	if rows > 1 { // Do not fail if installation group is not set on ring
-		return fmt.Errorf("error deleting ring installation group, expected 0 or 1 rows to be affected was %d", rows)
-	}
-
-	err = tx.Commit()
-	if err != nil {
-		return errors.Wrap(err, "failed to commit the transaction")
 	}
 
 	return nil

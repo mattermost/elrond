@@ -77,14 +77,7 @@ func RingsFromReader(reader io.Reader) ([]*Ring, error) {
 // RingFilter describes the parameters used to constrain a set of rings.
 type RingFilter struct {
 	Paging
-	InstallationGroups *InstallationGroupsFilter
-	Page               int
-	PerPage            int
-	IncludeDeleted     bool
-}
-
-// InstallationGroupsFilter describes filter based on Installation Groups.
-type InstallationGroupsFilter struct {
-	// MatchAllIDs contains all Installation Group IDs which need to be set on a Ring for it to be included in the result.
-	MatchAllIDs []string
+	Page           int
+	PerPage        int
+	IncludeDeleted bool
 }

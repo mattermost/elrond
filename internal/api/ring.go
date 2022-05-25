@@ -135,7 +135,7 @@ func handleCreateRing(c *Context, w http.ResponseWriter, r *http.Request) {
 
 	installationGroups, err := model.InstallationGroupsFromStringSlice(createRingRequest.InstallationGroups)
 	if err != nil {
-		c.Logger.WithError(err).Error("failed to validate extra installation groups")
+		c.Logger.WithError(err).Error("failed to validate installation groups")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}

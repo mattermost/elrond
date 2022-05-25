@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/olekukonko/tablewriter"
 	"github.com/pkg/errors"
@@ -307,14 +308,22 @@ var ringListCmd = &cobra.Command{
 		if outputToTable {
 			table := tablewriter.NewWriter(os.Stdout)
 			table.SetAlignment(tablewriter.ALIGN_LEFT)
-			table.SetHeader([]string{"ID", "STATE", "NAME", "PRIORITY", "SOAK TIME", "IMAGE", "VERSION"})
+			table.SetHeader([]string{"ID", "STATE", "NAME", "PRIORITY", "INSTALLATION GROUPS", "SOAK TIME", "IMAGE", "VERSION"})
 
 			for _, ring := range rings {
+				var igs []string
+				if len(ring.InstallationGroups) > 0 {
+					for _, ig := range ring.InstallationGroups {
+						igs = append(igs, ig.Name)
+					}
+
+				}
 				table.Append([]string{
 					ring.ID,
 					ring.State,
 					ring.Name,
 					strconv.Itoa(ring.Priority),
+					strings.Join(igs, ", "),
 					strconv.Itoa(ring.SoakTime),
 					ring.Image,
 					ring.Version,
