@@ -15,24 +15,23 @@ import (
 
 // CreateRingRequest specifies the parameters for a new ring.
 type CreateRingRequest struct {
-	Name              string `json:"name,omitempty"`
-	Priority          int    `json:"priority,omitempty"`
-	InstallationGroup string `json:"installationGroup,omitempty"`
-	SoakTime          int    `json:"soakTime,omitempty"`
-	Image             string `json:"image,omitempty"`
-	Version           string `json:"version,omitempty"`
-	APISecurityLock   bool   `json:"apiSecurityLock,omitempty"`
+	Name               string   `json:"name,omitempty"`
+	Priority           int      `json:"priority,omitempty"`
+	InstallationGroups []string `json:"installationGroups,omitempty"`
+	SoakTime           int      `json:"soakTime,omitempty"`
+	Image              string   `json:"image,omitempty"`
+	Version            string   `json:"version,omitempty"`
+	APISecurityLock    bool     `json:"apiSecurityLock,omitempty"`
 }
 
 // UpdateRingRequest specifies the parameters to update a ring.
 type UpdateRingRequest struct {
-	Name              string `json:"name,omitempty"`
-	Priority          int    `json:"priority,omitempty"`
-	InstallationGroup string `json:"installationGroup,omitempty"`
-	SoakTime          int    `json:"soakTime,omitempty"`
-	Image             string `json:"image,omitempty"`
-	Version           string `json:"version,omitempty"`
-	APISecurityLock   bool   `json:"apiSecurityLock,omitempty"`
+	Name            string `json:"name,omitempty"`
+	Priority        int    `json:"priority,omitempty"`
+	SoakTime        int    `json:"soakTime,omitempty"`
+	Image           string `json:"image,omitempty"`
+	Version         string `json:"version,omitempty"`
+	APISecurityLock bool   `json:"apiSecurityLock,omitempty"`
 }
 
 // SetDefaults sets the default values for a ring create request.
@@ -46,10 +45,6 @@ func (request *CreateRingRequest) SetDefaults() {
 func (request *CreateRingRequest) Validate() error {
 	if request.Priority == 0 {
 		return errors.New("Priority cannot be zero")
-	}
-
-	if request.InstallationGroup == "" {
-		return errors.New("InstallationGroup cannot be empty")
 	}
 
 	return nil

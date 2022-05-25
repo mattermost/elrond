@@ -328,3 +328,37 @@ func (c *Client) makeSecurityCall(resourceType, id, securityType, action string)
 	}
 
 }
+
+// RegisterRingInstallationGroups registers installation groups to the given ring.
+func (c *Client) RegisterRingInstallationGroups(ringID string, installationGroupsRequest *RegisterInstallationGroupsRequest) (*Ring, error) {
+	resp, err := c.doPost(c.buildURL("/api/ring/%s/installationgroups", ringID), installationGroupsRequest)
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return RingFromReader(resp.Body)
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
+// DeleteRingInstallationGroup deletes installation group from the given ring.
+func (c *Client) DeleteRingInstallationGroup(ringID string, installationGroupName string) error {
+	resp, err := c.doDelete(c.buildURL("/api/ring/%s/installationgroup/%s", ringID, installationGroupName))
+	if err != nil {
+		return err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusNoContent:
+		return nil
+
+	default:
+		return errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}

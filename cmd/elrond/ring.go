@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/olekukonko/tablewriter"
 	"github.com/pkg/errors"
@@ -23,18 +24,17 @@ func init() {
 
 	ringCreateCmd.Flags().String("name", "", "The name that identifies the deployment ring.")
 	ringCreateCmd.Flags().Int("priority", 1, "The priority of a new deployment ring.")
-	ringCreateCmd.Flags().String("installation-group", "", "The installation group ID of the group registered in the provisioner.")
+	ringCreateCmd.Flags().StringArray("installation-group", []string{}, "The installation group IDs to register with the ring. Accepts multiple values, for example: '... --installation-group abc --installation-group def'")
+
 	ringCreateCmd.Flags().Int("soak-time", 7200, "The soak time to consider a release stable.")
 	ringCreateCmd.Flags().String("image", "", "The Mattermost image to associate with this release ring.")
 	ringCreateCmd.Flags().String("version", "", "The Mattermost version to associate with this release ring.")
 
-	ringCreateCmd.MarkFlagRequired("priority")           //nolint
-	ringCreateCmd.MarkFlagRequired("installation-group") //nolint
+	ringCreateCmd.MarkFlagRequired("priority") //nolint
 
 	ringUpdateCmd.Flags().String("ring", "", "The id of the ring to update.")
 	ringUpdateCmd.Flags().String("name", "", "The name to set to the deployment ring.")
 	ringUpdateCmd.Flags().Int("priority", 0, "The priority to set to the deployment ring.")
-	ringUpdateCmd.Flags().String("installation-group", "", "The installation group ID to set to the deployment ring.")
 	ringUpdateCmd.Flags().Int("soak-time", 0, "The soak time to set to the deployment ring.")
 	ringUpdateCmd.Flags().String("image", "", "The Mattermost image to set to the deployment ring. This will not force a release.")
 	ringUpdateCmd.Flags().String("version", "", "The Mattermost version to set to the deployment ring. This will not force a release.")
@@ -64,6 +64,7 @@ func init() {
 	ringCmd.AddCommand(ringDeleteCmd)
 	ringCmd.AddCommand(ringGetCmd)
 	ringCmd.AddCommand(ringListCmd)
+	ringCmd.AddCommand(ringInstallationGroupCmd)
 }
 
 var ringCmd = &cobra.Command{
@@ -92,18 +93,18 @@ var ringCreateCmd = &cobra.Command{
 
 		name, _ := command.Flags().GetString("name")
 		priority, _ := command.Flags().GetInt("priority")
-		installationGroup, _ := command.Flags().GetString("installation-group")
+		installationGroups, _ := command.Flags().GetStringArray("installation-group")
 		soakTime, _ := command.Flags().GetInt("soak-time")
 		image, _ := command.Flags().GetString("image")
 		version, _ := command.Flags().GetString("version")
 
 		request := &model.CreateRingRequest{
-			Name:              name,
-			Priority:          priority,
-			InstallationGroup: installationGroup,
-			SoakTime:          soakTime,
-			Image:             image,
-			Version:           version,
+			Name:               name,
+			Priority:           priority,
+			InstallationGroups: installationGroups,
+			SoakTime:           soakTime,
+			Image:              image,
+			Version:            version,
 		}
 
 		dryRun, _ := command.Flags().GetBool("dry-run")
@@ -145,18 +146,16 @@ var ringUpdateCmd = &cobra.Command{
 		ringID, _ := command.Flags().GetString("ring")
 		name, _ := command.Flags().GetString("name")
 		priority, _ := command.Flags().GetInt("priority")
-		installationGroup, _ := command.Flags().GetString("installation-group")
 		soakTime, _ := command.Flags().GetInt("soak-time")
 		image, _ := command.Flags().GetString("image")
 		version, _ := command.Flags().GetString("version")
 
 		request := &model.UpdateRingRequest{
-			Name:              name,
-			Priority:          priority,
-			InstallationGroup: installationGroup,
-			SoakTime:          soakTime,
-			Image:             image,
-			Version:           version,
+			Name:     name,
+			Priority: priority,
+			SoakTime: soakTime,
+			Image:    image,
+			Version:  version,
 		}
 
 		dryRun, _ := command.Flags().GetBool("dry-run")
@@ -309,15 +308,22 @@ var ringListCmd = &cobra.Command{
 		if outputToTable {
 			table := tablewriter.NewWriter(os.Stdout)
 			table.SetAlignment(tablewriter.ALIGN_LEFT)
-			table.SetHeader([]string{"ID", "STATE", "NAME", "PRIORITY", "INSTALLATION GROUP", "SOAK TIME", "IMAGE", "VERSION"})
+			table.SetHeader([]string{"ID", "STATE", "NAME", "PRIORITY", "INSTALLATION GROUPS", "SOAK TIME", "IMAGE", "VERSION"})
 
 			for _, ring := range rings {
+				var igs []string
+				if len(ring.InstallationGroups) > 0 {
+					for _, ig := range ring.InstallationGroups {
+						igs = append(igs, ig.Name)
+					}
+
+				}
 				table.Append([]string{
 					ring.ID,
 					ring.State,
 					ring.Name,
 					strconv.Itoa(ring.Priority),
-					ring.InstallationGroup,
+					strings.Join(igs, ", "),
 					strconv.Itoa(ring.SoakTime),
 					ring.Image,
 					ring.Version,

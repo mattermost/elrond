@@ -40,7 +40,7 @@ func (s *mockRingStore) UpdateRing(Ring *model.Ring) error {
 	return nil
 }
 
-func (s *mockRingStore) CreateRing(Ring *model.Ring) error {
+func (s *mockRingStore) CreateRing(Ring *model.Ring, installationGroups []*model.InstallationGroup) error {
 	return nil
 }
 
@@ -143,7 +143,10 @@ func TestRingSupervisorSupervise(t *testing.T) {
 			Ring := &model.Ring{
 				State: tc.InitialState,
 			}
-			err := sqlStore.CreateRing(Ring)
+
+			installationGroups := []*model.InstallationGroup{{Name: "group1"}, {Name: "group2"}}
+
+			err := sqlStore.CreateRing(Ring, installationGroups)
 			require.NoError(t, err)
 
 			supervisor.Supervise(Ring)
@@ -162,7 +165,9 @@ func TestRingSupervisorSupervise(t *testing.T) {
 		Ring := &model.Ring{
 			State: model.RingStateDeletionRequested,
 		}
-		err := sqlStore.CreateRing(Ring)
+		installationGroups := []*model.InstallationGroup{{Name: "group1"}, {Name: "group2"}}
+
+		err := sqlStore.CreateRing(Ring, installationGroups)
 		require.NoError(t, err)
 
 		// The stored Ring is RingStateDeletionRequested, so we will pass

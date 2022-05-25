@@ -16,7 +16,7 @@ var ringSelect sq.SelectBuilder
 
 func init() {
 	ringSelect = sq.
-		Select("Ring.ID", "Name", "Priority", "InstallationGroup", "SoakTime", "Image", "Version", "Provisioner", "State", "CreateAt", "DeleteAt", "ReleaseAt", "APISecurityLock", "LockAcquiredBy", "LockAcquiredAt").
+		Select("Ring.ID", "Name", "Priority", "SoakTime", "Image", "Version", "Provisioner", "State", "CreateAt", "DeleteAt", "ReleaseAt", "APISecurityLock", "LockAcquiredBy", "LockAcquiredAt").
 		From("Ring")
 }
 
@@ -104,7 +104,7 @@ func (sqlStore *SQLStore) GetUnlockedRingsPendingWork() ([]*model.Ring, error) {
 }
 
 // CreateRing records the given ring to the database, assigning it a unique ID.
-func (sqlStore *SQLStore) CreateRing(ring *model.Ring) error {
+func (sqlStore *SQLStore) CreateRing(ring *model.Ring, installationGroups []*model.InstallationGroup) error {
 	tx, err := sqlStore.beginTransaction(sqlStore.db)
 	if err != nil {
 		return errors.Wrap(err, "failed to begin transaction")
@@ -113,6 +113,18 @@ func (sqlStore *SQLStore) CreateRing(ring *model.Ring) error {
 
 	if err = sqlStore.createRing(tx, ring); err != nil {
 		return errors.Wrap(err, "failed to create ring")
+	}
+
+	if len(installationGroups) > 0 {
+		installationGroups, err := sqlStore.getOrCreateInstallationGroups(tx, installationGroups)
+		if err != nil {
+			return errors.Wrap(err, "failed to get or create installation groups")
+		}
+
+		_, err = sqlStore.createRingInstallationGroups(tx, ring.ID, installationGroups)
+		if err != nil {
+			return errors.Wrap(err, "failed to register installation groups for ring")
+		}
 	}
 
 	if err = tx.Commit(); err != nil {
@@ -130,21 +142,20 @@ func (sqlStore *SQLStore) createRing(execer execer, ring *model.Ring) error {
 	if _, err := sqlStore.execBuilder(execer, sq.
 		Insert("Ring").
 		SetMap(map[string]interface{}{
-			"ID":                ring.ID,
-			"Name":              ring.Name,
-			"Priority":          ring.Priority,
-			"State":             ring.State,
-			"InstallationGroup": ring.InstallationGroup,
-			"SoakTime":          ring.SoakTime,
-			"Image":             ring.Image,
-			"Version":           ring.Version,
-			"Provisioner":       ring.Provisioner,
-			"CreateAt":          ring.CreateAt,
-			"ReleaseAt":         ring.ReleaseAt,
-			"DeleteAt":          ring.DeleteAt,
-			"APISecurityLock":   ring.APISecurityLock,
-			"LockAcquiredBy":    nil,
-			"LockAcquiredAt":    0,
+			"ID":              ring.ID,
+			"Name":            ring.Name,
+			"Priority":        ring.Priority,
+			"State":           ring.State,
+			"SoakTime":        ring.SoakTime,
+			"Image":           ring.Image,
+			"Version":         ring.Version,
+			"Provisioner":     ring.Provisioner,
+			"CreateAt":        ring.CreateAt,
+			"ReleaseAt":       ring.ReleaseAt,
+			"DeleteAt":        ring.DeleteAt,
+			"APISecurityLock": ring.APISecurityLock,
+			"LockAcquiredBy":  nil,
+			"LockAcquiredAt":  0,
 		}),
 	); err != nil {
 		return errors.Wrap(err, "failed to create ring")
@@ -159,14 +170,13 @@ func (sqlStore *SQLStore) UpdateRing(ring *model.Ring) error {
 	if _, err := sqlStore.execBuilder(sqlStore.db, sq.
 		Update("Ring").
 		SetMap(map[string]interface{}{
-			"Name":              ring.Name,
-			"Priority":          ring.Priority,
-			"State":             ring.State,
-			"InstallationGroup": ring.InstallationGroup,
-			"SoakTime":          ring.SoakTime,
-			"Provisioner":       ring.Provisioner,
-			"Image":             ring.Image,
-			"Version":           ring.Version,
+			"Name":        ring.Name,
+			"Priority":    ring.Priority,
+			"State":       ring.State,
+			"SoakTime":    ring.SoakTime,
+			"Provisioner": ring.Provisioner,
+			"Image":       ring.Image,
+			"Version":     ring.Version,
 		}).
 		Where("ID = ?", ring.ID),
 	); err != nil {

@@ -6,6 +6,7 @@ package store
 
 import (
 	"github.com/blang/semver"
+	"github.com/pkg/errors"
 )
 
 type migration struct {
@@ -28,7 +29,7 @@ var migrations = []migration{
 			);
 		`)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "failed to create System table")
 		}
 
 		if _, err = e.Exec(`
@@ -37,7 +38,6 @@ var migrations = []migration{
 				State TEXT NOT NULL,
 				Name TEXT NOT NULL,
 				Priority INT NOT NULL,
-				InstallationGroup TEXT NULL,
 				Provisioner TEXT NOT NULL,
 				SoakTime INT NOT NULL,
 				Image TEXT NOT NULL,
@@ -50,7 +50,33 @@ var migrations = []migration{
 				LockAcquiredAt BIGINT NOT NULL
 			);
 		`); err != nil {
+			return errors.Wrap(err, "failed to create Ring table")
+		}
+
+		if _, err := e.Exec(`
+			CREATE TABLE InstallationGroup (
+				ID TEXT PRIMARY KEY,
+				Name TEXT NOT NULL UNIQUE
+			);
+		`); err != nil {
+			return errors.Wrap(err, "failed to create InstallationGroup table")
+		}
+
+		if _, err := e.Exec(`
+			CREATE TABLE RingInstallationGroup (
+				ID TEXT PRIMARY KEY,
+				RingID TEXT NOT NULL,
+				InstallationGroupID TEXT NOT NULL
+			);
+		`); err != nil {
 			return err
+		}
+
+		_, err = e.Exec(`
+			CREATE UNIQUE INDEX RingInstallationGroup_RingID_InstallationGroupID ON RingInstallationGroup (RingID, InstallationGroupID);
+		`)
+		if err != nil {
+			return errors.Wrap(err, "failed to create unique installation group index")
 		}
 
 		// Add webhook table.
@@ -63,13 +89,13 @@ var migrations = []migration{
 				DeleteAt BIGINT NOT NULL
 			);
 		`); err != nil {
-			return err
+			return errors.Wrap(err, "failed to create Webhooks table")
 		}
 
 		if _, err = e.Exec(`
 			CREATE UNIQUE INDEX Webhook_URL_DeleteAt ON Webhooks (URL, DeleteAt);
 		`); err != nil {
-			return err
+			return errors.Wrap(err, "failed to create unique webhook index")
 		}
 
 		return nil

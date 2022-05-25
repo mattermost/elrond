@@ -18,7 +18,7 @@ type ringStore interface {
 	GetRing(ringID string) (*model.Ring, error)
 	GetUnlockedRingsPendingWork() ([]*model.Ring, error)
 	GetRings(ringFilter *model.RingFilter) ([]*model.Ring, error)
-	CreateRing(ring *model.Ring) error
+	CreateRing(ring *model.Ring, installationGroups []*model.InstallationGroup) error
 	UpdateRing(ring *model.Ring) error
 	LockRing(ringID, lockerID string) (bool, error)
 	UnlockRing(ringID string, lockerID string, force bool) (bool, error)

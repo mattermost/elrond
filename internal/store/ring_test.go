@@ -30,15 +30,16 @@ func TestRings(t *testing.T) {
 		defer CloseConnection(t, sqlStore)
 
 		ring1 := &model.Ring{
-			Provisioner:       "elrond",
-			Name:              "test",
-			Priority:          1,
-			InstallationGroup: "12345678",
-			SoakTime:          60,
-			State:             model.RingStateCreationRequested,
+			Provisioner: "elrond",
+			Name:        "test",
+			Priority:    1,
+			SoakTime:    60,
+			State:       model.RingStateCreationRequested,
 		}
 
-		err := sqlStore.CreateRing(ring1)
+		installationGroups := []*model.InstallationGroup{{Name: "12345"}, {Name: "123456"}}
+
+		err := sqlStore.CreateRing(ring1, installationGroups)
 		require.NoError(t, err)
 
 		actualRing1, err := sqlStore.GetRing(ring1.ID)
@@ -76,15 +77,16 @@ func TestRings(t *testing.T) {
 		defer CloseConnection(t, sqlStore)
 
 		ring1 := &model.Ring{
-			Provisioner:       "elrond",
-			Name:              "test",
-			Priority:          1,
-			InstallationGroup: "12345678",
-			SoakTime:          60,
-			State:             model.RingStateCreationRequested,
+			Provisioner: "elrond",
+			Name:        "test",
+			Priority:    1,
+			SoakTime:    60,
+			State:       model.RingStateCreationRequested,
 		}
 
-		err := sqlStore.CreateRing(ring1)
+		installationGroups := []*model.InstallationGroup{{Name: "group1"}, {Name: "group2"}}
+
+		err := sqlStore.CreateRing(ring1, installationGroups)
 		require.NoError(t, err)
 
 		ring1.Priority = 2
@@ -105,15 +107,16 @@ func TestRings(t *testing.T) {
 		defer CloseConnection(t, sqlStore)
 
 		ring1 := &model.Ring{
-			Provisioner:       "elrond",
-			Name:              "test",
-			Priority:          1,
-			InstallationGroup: "12345678",
-			SoakTime:          60,
-			State:             model.RingStateCreationRequested,
+			Provisioner: "elrond",
+			Name:        "test",
+			Priority:    1,
+			SoakTime:    60,
+			State:       model.RingStateCreationRequested,
 		}
 
-		err := sqlStore.CreateRing(ring1)
+		installationGroups := []*model.InstallationGroup{{Name: "group1"}, {Name: "group2"}}
+
+		err := sqlStore.CreateRing(ring1, installationGroups)
 		require.NoError(t, err)
 
 		err = sqlStore.DeleteRing(ring1.ID)
@@ -157,7 +160,8 @@ func TestGetUnlockedRingsPendingWork(t *testing.T) {
 	creationRequestedRing := &model.Ring{
 		State: model.RingStateCreationRequested,
 	}
-	err := sqlStore.CreateRing(creationRequestedRing)
+
+	err := sqlStore.CreateRing(creationRequestedRing, nil)
 	require.NoError(t, err)
 
 	time.Sleep(1 * time.Millisecond)
@@ -165,7 +169,7 @@ func TestGetUnlockedRingsPendingWork(t *testing.T) {
 	releaseRequestedRing := &model.Ring{
 		State: model.RingStateReleaseRequested,
 	}
-	err = sqlStore.CreateRing(releaseRequestedRing)
+	err = sqlStore.CreateRing(releaseRequestedRing, nil)
 	require.NoError(t, err)
 
 	time.Sleep(1 * time.Millisecond)
@@ -173,7 +177,7 @@ func TestGetUnlockedRingsPendingWork(t *testing.T) {
 	deletionRequestedRing := &model.Ring{
 		State: model.RingStateDeletionRequested,
 	}
-	err = sqlStore.CreateRing(deletionRequestedRing)
+	err = sqlStore.CreateRing(deletionRequestedRing, nil)
 	require.NoError(t, err)
 
 	// Store rings with states that should be ignored by GetUnlockedRingsPendingWork()
@@ -185,7 +189,7 @@ func TestGetUnlockedRingsPendingWork(t *testing.T) {
 		model.RingStateStable,
 	}
 	for _, otherState := range otherStates {
-		err = sqlStore.CreateRing(&model.Ring{State: otherState})
+		err = sqlStore.CreateRing(&model.Ring{State: otherState}, nil)
 		require.NoError(t, err)
 	}
 
@@ -228,11 +232,11 @@ func TestLockRing(t *testing.T) {
 	lockerID2 := model.NewID()
 
 	ring1 := &model.Ring{}
-	err := sqlStore.CreateRing(ring1)
+	err := sqlStore.CreateRing(ring1, nil)
 	require.NoError(t, err)
 
 	ring2 := &model.Ring{}
-	err = sqlStore.CreateRing(ring2)
+	err = sqlStore.CreateRing(ring2, nil)
 	require.NoError(t, err)
 
 	t.Run("rings should start unlocked", func(t *testing.T) {
