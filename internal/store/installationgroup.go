@@ -186,7 +186,7 @@ func (sqlStore *SQLStore) getInstallationGroupsForRing(db dbInterface, ringID st
 	return installationGroups, nil
 }
 
-// GetInstallationGroupsForRing fetches all installation groups registered to the ring.
+// GetRingFromInstallationGroupID gets the ring that has the associated installation group.
 func (sqlStore *SQLStore) GetRingFromInstallationGroupID(installationGroupID string) (*model.Ring, error) {
 	return sqlStore.getRingFromInstallationGroupID(sqlStore.db, installationGroupID)
 }

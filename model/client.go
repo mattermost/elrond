@@ -329,7 +329,7 @@ func (c *Client) makeSecurityCall(resourceType, id, securityType, action string)
 
 }
 
-// RegisterRingInstallationGroups registers installation groups to the given ring.
+// RegisterRingInstallationGroup registers an installation group to the given ring.
 func (c *Client) RegisterRingInstallationGroup(ringID string, installationGroupRequest *RegisterInstallationGroupRequest) (*Ring, error) {
 	resp, err := c.doPost(c.buildURL("/api/ring/%s/installationgroup", ringID), installationGroupRequest)
 	if err != nil {

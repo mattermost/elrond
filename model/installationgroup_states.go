@@ -9,7 +9,7 @@ const (
 	InstallationGroupStable = "stable"
 	// InstallationGroupReleasePending is an installation group pending release.
 	InstallationGroupReleasePending = "release-pending"
-	// InstallationGroupReleaseInProgress is an installation group with a release in progress.
+	// InstallationGroupReleaseRequested is an installation group with a release requested.
 	InstallationGroupReleaseRequested = "release-requested"
 	// InstallationGroupReleaseSoakingRequested is an installation group with a release in soaking.
 	InstallationGroupReleaseSoakingRequested = "release-soaking-requested"
