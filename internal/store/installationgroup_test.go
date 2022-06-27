@@ -46,50 +46,46 @@ func TestInstallationGroups_Ring(t *testing.T) {
 		assert.Nil(t, installationGroup)
 	})
 
-	installationGroups := []*model.InstallationGroup{&installationGroup1, &installationGroup2}
-
 	ring1 := model.Ring{}
 	err = sqlStore.createRing(sqlStore.db, &ring1)
 	require.NoError(t, err)
 
-	_, err = sqlStore.CreateRingInstallationGroups(ring1.ID, installationGroups)
+	_, err = sqlStore.CreateRingInstallationGroup(ring1.ID, &installationGroup1)
 	require.NoError(t, err)
 
 	t.Run("get installation groups for ring", func(t *testing.T) {
 		installationGroupsForRing, err := sqlStore.GetInstallationGroupsForRing(ring1.ID)
 		require.NoError(t, err)
-		assert.Equal(t, len(installationGroups), len(installationGroupsForRing))
+		assert.Equal(t, 1, len(installationGroupsForRing))
 		assert.True(t, model.ContainsInstallationGroup(installationGroupsForRing, &installationGroup1))
-		assert.True(t, model.ContainsInstallationGroup(installationGroupsForRing, &installationGroup2))
 	})
 
 	t.Run("fail to assign the same installation group to the ring twice", func(t *testing.T) {
-		_, err = sqlStore.CreateRingInstallationGroups(ring1.ID, installationGroups)
+		_, err = sqlStore.CreateRingInstallationGroup(ring1.ID, &installationGroup1)
 		require.Error(t, err)
 		assert.Contains(t, strings.ToLower(err.Error()), "unique constraint") // Make sure error comes from DB
 	})
 
 	ring2 := model.Ring{}
-	err = sqlStore.CreateRing(&ring2, installationGroups)
+	err = sqlStore.CreateRing(&ring2, &installationGroup2)
 	require.NoError(t, err)
 
 	t.Run("get installation groups for ring2", func(t *testing.T) {
 		installationGroupsForRing, err := sqlStore.GetInstallationGroupsForRing(ring2.ID)
 		require.NoError(t, err)
-		assert.Equal(t, len(installationGroups), len(installationGroupsForRing))
-		assert.True(t, model.ContainsInstallationGroup(installationGroupsForRing, &installationGroup1))
+		assert.Equal(t, 1, len(installationGroupsForRing))
 		assert.True(t, model.ContainsInstallationGroup(installationGroupsForRing, &installationGroup2))
 	})
 
 	t.Run("delete ring installation group", func(t *testing.T) {
-		err = sqlStore.DeleteRingInstallationGroup(ring1.ID, installationGroup1.Name)
+		err = sqlStore.DeleteRingInstallationGroup(ring1.ID, installationGroup1.ID)
 		require.NoError(t, err)
 		installationGroupsForRing, err := sqlStore.GetInstallationGroupsForRing(ring1.ID)
 		require.NoError(t, err)
-		assert.Equal(t, 1, len(installationGroupsForRing))
+		assert.Equal(t, 0, len(installationGroupsForRing))
 
 		t.Run("do not fail when deleting ring installation group twice", func(t *testing.T) {
-			err = sqlStore.DeleteRingInstallationGroup(ring1.ID, installationGroup1.Name)
+			err = sqlStore.DeleteRingInstallationGroup(ring1.ID, installationGroup1.ID)
 			require.NoError(t, err)
 		})
 	})

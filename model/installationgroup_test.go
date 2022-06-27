@@ -12,36 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestInstallationGroupsFromStringSlice(t *testing.T) {
-
-	t.Run("valid installation groups", func(t *testing.T) {
-		for _, testCase := range []struct {
-			description        string
-			names              []string
-			installationGroups []*InstallationGroup
-		}{
-			{"nil array", nil, nil},
-			{"empty array", []string{}, []*InstallationGroup{}},
-			{
-				"valid names",
-				[]string{"abcd", "multi-tenant", "awesome_installation_group"},
-				[]*InstallationGroup{{Name: "abcd"}, {Name: "multi-tenant"}, {Name: "awesome_installation_group"}},
-			},
-			{
-				"long names",
-				[]string{"multi-tenant-1234-abcd-very-long-name", "super-awesome-long_name"},
-				[]*InstallationGroup{{Name: "multi-tenant-1234-abcd-very-long-name"}, {Name: "super-awesome-long_name"}},
-			},
-		} {
-			t.Run(testCase.description, func(t *testing.T) {
-				installationGroups, err := InstallationGroupsFromStringSlice(testCase.names)
-				require.NoError(t, err)
-				assert.Equal(t, testCase.installationGroups, installationGroups)
-			})
-		}
-	})
-}
-
 func TestSortInstallationGroups(t *testing.T) {
 
 	for _, testCase := range []struct {
@@ -66,17 +36,17 @@ func TestSortInstallationGroups(t *testing.T) {
 	}
 }
 
-func TestNewRegisterInstallationGroupsRequestFromReader(t *testing.T) {
+func TestNewRegisterInstallationGroupRequestFromReader(t *testing.T) {
 	t.Run("empty request", func(t *testing.T) {
-		installationGroupsRequest, err := NewRegisterInstallationGroupsRequestFromReader(bytes.NewReader([]byte(
+		installationGroupsRequest, err := NewRegisterInstallationGroupRequestFromReader(bytes.NewReader([]byte(
 			``,
 		)))
 		require.NoError(t, err)
-		require.Equal(t, &RegisterInstallationGroupsRequest{}, installationGroupsRequest)
+		require.Equal(t, &RegisterInstallationGroupRequest{}, installationGroupsRequest)
 	})
 
 	t.Run("invalid request", func(t *testing.T) {
-		installationGroupsRequest, err := NewRegisterInstallationGroupsRequestFromReader(bytes.NewReader([]byte(
+		installationGroupsRequest, err := NewRegisterInstallationGroupRequestFromReader(bytes.NewReader([]byte(
 			`{test`,
 		)))
 		require.Error(t, err)
@@ -84,11 +54,11 @@ func TestNewRegisterInstallationGroupsRequestFromReader(t *testing.T) {
 	})
 
 	t.Run("request", func(t *testing.T) {
-		installationGroupsRequest, err := NewRegisterInstallationGroupsRequestFromReader(bytes.NewReader([]byte(
-			`{"installationGroups":["abcd", "super-awesome"]}`,
+		installationGroupsRequest, err := NewRegisterInstallationGroupRequestFromReader(bytes.NewReader([]byte(
+			`{"Name": "super-awesome"}`,
 		)))
 		require.NoError(t, err)
-		require.Equal(t, &RegisterInstallationGroupsRequest{InstallationGroups: []string{"abcd", "super-awesome"}}, installationGroupsRequest)
+		require.Equal(t, &RegisterInstallationGroupRequest{Name: "super-awesome"}, installationGroupsRequest)
 	})
 }
 

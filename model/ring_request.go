@@ -15,13 +15,13 @@ import (
 
 // CreateRingRequest specifies the parameters for a new ring.
 type CreateRingRequest struct {
-	Name               string   `json:"name,omitempty"`
-	Priority           int      `json:"priority,omitempty"`
-	InstallationGroups []string `json:"installationGroups,omitempty"`
-	SoakTime           int      `json:"soakTime,omitempty"`
-	Image              string   `json:"image,omitempty"`
-	Version            string   `json:"version,omitempty"`
-	APISecurityLock    bool     `json:"apiSecurityLock,omitempty"`
+	Name              string             `json:"name,omitempty"`
+	Priority          int                `json:"priority,omitempty"`
+	InstallationGroup *InstallationGroup `json:"installationGroup,omitempty"`
+	SoakTime          int                `json:"soakTime,omitempty"`
+	Image             string             `json:"image,omitempty"`
+	Version           string             `json:"version,omitempty"`
+	APISecurityLock   bool               `json:"apiSecurityLock,omitempty"`
 }
 
 // UpdateRingRequest specifies the parameters to update a ring.

@@ -15,8 +15,8 @@ const (
 	RingStateReleaseRequested = "release-requested"
 	// RingStateReleaseFailed is a ring that failed the release.
 	RingStateReleaseFailed = "release-failed"
-	// RingStateReleaseComplete is a ring that the release is complete.
-	RingStateReleaseComplete = "release-complete"
+	// RingStateReleaseInProgress is a ring that the release is in progress.
+	RingStateReleaseInProgress = "release-in-progress"
 	// RingStateSoakingRequested is a ring that is undergoing soak period.
 	RingStateSoakingRequested = "soaking-requested"
 	// RingStateSoakingFailed is a ring that is undergoing soak period.
@@ -44,7 +44,7 @@ var AllRingStates = []string{
 	RingStateCreationFailed,
 	RingStateReleaseRequested,
 	RingStateReleaseFailed,
-	RingStateReleaseComplete,
+	RingStateReleaseInProgress,
 	RingStateSoakingRequested,
 	RingStateSoakingFailed,
 	RingStateReleaseRollbackRequested,
@@ -63,6 +63,7 @@ var AllRingStates = []string{
 var AllRingStatesPendingWork = []string{
 	RingStateCreationRequested,
 	RingStateReleaseRequested,
+	RingStateReleaseInProgress,
 	RingStateSoakingRequested,
 	RingStateReleaseRollbackRequested,
 	RingStateDeletionRequested,
@@ -89,6 +90,8 @@ func (c *Ring) ValidTransitionState(newState string) bool {
 		return validTransitionToRingStateCreationRequested(c.State)
 	case RingStateReleaseRequested:
 		return validTransitionToRingStateReleaseRequested(c.State)
+	case RingStateReleaseInProgress:
+		return validTransitionToRingStateReleaseInProgress(c.State)
 	case RingStateDeletionRequested:
 		return validTransitionToRingStateDeletionRequested(c.State)
 	case RingStateSoakingRequested:
@@ -121,6 +124,15 @@ func validTransitionToRingStateReleaseRequested(currentState string) bool {
 	return false
 }
 
+func validTransitionToRingStateReleaseInProgress(currentState string) bool {
+	switch currentState {
+	case RingStateReleaseRequested:
+		return true
+	}
+
+	return false
+}
+
 func validTransitionToRingStateDeletionRequested(currentState string) bool {
 	switch currentState {
 	case RingStateStable,
@@ -137,7 +149,7 @@ func validTransitionToRingStateDeletionRequested(currentState string) bool {
 
 func validTransitionToRingStateSoakingRequested(currentState string) bool {
 	switch currentState {
-	case RingStateReleaseComplete,
+	case RingStateReleaseInProgress,
 		RingStateSoakingRequested,
 		RingStateSoakingFailed:
 		return true

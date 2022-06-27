@@ -24,9 +24,11 @@ func init() {
 
 	ringCreateCmd.Flags().String("name", "", "The name that identifies the deployment ring.")
 	ringCreateCmd.Flags().Int("priority", 1, "The priority of a new deployment ring.")
-	ringCreateCmd.Flags().StringArray("installation-group", []string{}, "The installation group IDs to register with the ring. Accepts multiple values, for example: '... --installation-group abc --installation-group def'")
+	ringCreateCmd.Flags().String("installation-group-name", "", "The installation group name to register with the ring.")
+	ringCreateCmd.Flags().Int("installation-group-soak-time", 0, "The installation group soak time.")
+	ringCreateCmd.Flags().String("installation-group-provisioner-group-id", "", "The installation group provisioner group ID to associate.")
 
-	ringCreateCmd.Flags().Int("soak-time", 7200, "The soak time to consider a release stable.")
+	ringCreateCmd.Flags().Int("soak-time", 7200, "The soak time to consider a ring release stable.")
 	ringCreateCmd.Flags().String("image", "", "The Mattermost image to associate with this release ring.")
 	ringCreateCmd.Flags().String("version", "", "The Mattermost version to associate with this release ring.")
 
@@ -93,18 +95,26 @@ var ringCreateCmd = &cobra.Command{
 
 		name, _ := command.Flags().GetString("name")
 		priority, _ := command.Flags().GetInt("priority")
-		installationGroups, _ := command.Flags().GetStringArray("installation-group")
+		installationGroupName, _ := command.Flags().GetString("installation-group-name")
+		installationGroupSoakTime, _ := command.Flags().GetInt("installation-group-soak-time")
+		installationGroupProvisionerGroupID, _ := command.Flags().GetString("installation-group-provisioner-group-id")
 		soakTime, _ := command.Flags().GetInt("soak-time")
 		image, _ := command.Flags().GetString("image")
 		version, _ := command.Flags().GetString("version")
 
+		installationGroup := &model.InstallationGroup{
+			Name:               installationGroupName,
+			SoakTime:           installationGroupSoakTime,
+			ProvisionerGroupID: installationGroupProvisionerGroupID,
+		}
+
 		request := &model.CreateRingRequest{
-			Name:               name,
-			Priority:           priority,
-			InstallationGroups: installationGroups,
-			SoakTime:           soakTime,
-			Image:              image,
-			Version:            version,
+			Name:              name,
+			Priority:          priority,
+			InstallationGroup: installationGroup,
+			SoakTime:          soakTime,
+			Image:             image,
+			Version:           version,
 		}
 
 		dryRun, _ := command.Flags().GetBool("dry-run")

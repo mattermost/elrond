@@ -19,18 +19,22 @@ const (
 
 var installationGroupSelect sq.SelectBuilder
 var installationGroupColumns = []string{
-	"InstallationGroup.ID", "InstallationGroup.Name",
+	"InstallationGroup.ID",
+	"InstallationGroup.Name",
+	"InstallationGroup.State",
+	"InstallationGroup.SoakTime",
+	"InstallationGroup.ProvisionerGroupID",
 }
 
-var (
-	// ErrInstallationGroupUsedByRing is an error returned when user attempts to delete a installation group
-	// that is registered with a deployment ring.
-	ErrInstallationGroupUsedByRing = errors.New("cannot delete installation group, " +
-		"it is used by one or more deployment rings")
-	// ErrInstallationGroupDoNotMatchRings is an error returned when user attempts to register an installation group to a
-	// a ring that does not exist.
-	ErrInstallationGroupDoNotMatchRings = errors.New("cannot register installation groups to ring, ring does not exist")
-)
+type ringInstallationGroup struct {
+	RingID                              string
+	InstallationGroupID                 string
+	InstallationGroupName               string
+	InstallationGroupState              string
+	InstallationGroupReleaseAt          int64
+	InstallationGroupSoakTime           int
+	InstallationGroupProvisionerGroupID string
+}
 
 func init() {
 	installationGroupSelect = sq.Select(installationGroupColumns...).
@@ -40,6 +44,11 @@ func init() {
 // GetInstallationGroupByName fetches the given installation group by name.
 func (sqlStore *SQLStore) GetInstallationGroupByName(name string) (*model.InstallationGroup, error) {
 	return sqlStore.getInstallationGroupByName(sqlStore.db, name)
+}
+
+// GetInstallationGroupByID fetches the given installation group by ID.
+func (sqlStore *SQLStore) GetInstallationGroupByID(id string) (*model.InstallationGroup, error) {
+	return sqlStore.getInstallationGroupByID(sqlStore.db, id)
 }
 
 func (sqlStore *SQLStore) getInstallationGroupByName(db queryer, name string) (*model.InstallationGroup, error) {
@@ -53,7 +62,24 @@ func (sqlStore *SQLStore) getInstallationGroupByName(db queryer, name string) (*
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
-		return nil, errors.Wrap(err, "failed to get intallation group by name")
+		return nil, errors.Wrap(err, "failed to get installation group by name")
+	}
+
+	return &installationGroup, nil
+}
+
+func (sqlStore *SQLStore) getInstallationGroupByID(db queryer, id string) (*model.InstallationGroup, error) {
+	var installationGroup model.InstallationGroup
+
+	builder := installationGroupSelect.
+		Where("ID = ?", id).
+		Limit(1)
+	err := sqlStore.getBuilder(db, &installationGroup, builder)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, errors.Wrap(err, "failed to get installation group by id")
 	}
 
 	return &installationGroup, nil
@@ -69,8 +95,12 @@ func (sqlStore *SQLStore) createInstallationGroup(db execer, installationGroup *
 
 	_, err := sqlStore.execBuilder(db, sq.Insert("InstallationGroup").
 		SetMap(map[string]interface{}{
-			"ID":   installationGroup.ID,
-			"Name": installationGroup.Name,
+			"ID":                 installationGroup.ID,
+			"Name":               installationGroup.Name,
+			"State":              installationGroup.State,
+			"ReleaseAt":          installationGroup.ReleaseAt,
+			"SoakTime":           installationGroup.SoakTime,
+			"ProvisionerGroupID": installationGroup.ProvisionerGroupID,
 		}))
 	if err != nil {
 		return errors.Wrap(err, "failed to create installation group")
@@ -112,29 +142,28 @@ func (sqlStore *SQLStore) getOrCreateInstallationGroup(db dbInterface, installat
 	return installationGroup, nil
 }
 
-// CreateRingInstallationGroups maps selected installation groups to ring and stores it in the database.
-func (sqlStore *SQLStore) CreateRingInstallationGroups(ringID string, installationGroups []*model.InstallationGroup) ([]*model.InstallationGroup, error) {
-	installationGroups, err := sqlStore.getOrCreateInstallationGroups(sqlStore.db, installationGroups)
+// CreateRingInstallationGroup maps the selected installation group to ring and stores it in the database.
+func (sqlStore *SQLStore) CreateRingInstallationGroup(ringID string, installationGroup *model.InstallationGroup) (*model.InstallationGroup, error) {
+	installationGroup, err := sqlStore.getOrCreateInstallationGroup(sqlStore.db, installationGroup)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get or create installation groups")
 	}
 
-	return sqlStore.createRingInstallationGroups(sqlStore.db, ringID, installationGroups)
+	return sqlStore.createRingInstallationGroup(sqlStore.db, ringID, installationGroup)
 }
 
-func (sqlStore *SQLStore) createRingInstallationGroups(db execer, ringID string, installationGroups []*model.InstallationGroup) ([]*model.InstallationGroup, error) {
+func (sqlStore *SQLStore) createRingInstallationGroup(db execer, ringID string, installationGroup *model.InstallationGroup) (*model.InstallationGroup, error) {
 	builder := sq.Insert(ringInstallationGroupTable).
 		Columns("ID", "RingID", "InstallationGroupID")
 
-	for _, a := range installationGroups {
-		builder = builder.Values(model.NewID(), ringID, a.ID)
-	}
+	builder = builder.Values(model.NewID(), ringID, installationGroup.ID)
+
 	_, err := sqlStore.execBuilder(db, builder)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create ring installation groups")
+		return nil, errors.Wrap(err, "failed to create ring installation group")
 	}
 
-	return installationGroups, nil
+	return installationGroup, nil
 }
 
 // GetInstallationGroupsForRing fetches all installation groups registered to the ring.
@@ -157,10 +186,55 @@ func (sqlStore *SQLStore) getInstallationGroupsForRing(db dbInterface, ringID st
 	return installationGroups, nil
 }
 
-type ringInstallationGroup struct {
-	RingID                string
-	InstallationGroupID   string
-	InstallationGroupName string
+// GetInstallationGroupsForRing fetches all installation groups registered to the ring.
+func (sqlStore *SQLStore) GetRingFromInstallationGroupID(installationGroupID string) (*model.Ring, error) {
+	return sqlStore.getRingFromInstallationGroupID(sqlStore.db, installationGroupID)
+}
+
+func (sqlStore *SQLStore) getRingFromInstallationGroupID(db dbInterface, installationGroupID string) (*model.Ring, error) {
+	var ringID []string
+
+	builder := sq.Select("RingID").
+		From(ringInstallationGroupTable).
+		Where("InstallationGroupID = ?", installationGroupID)
+	err := sqlStore.selectBuilder(db, &ringID, builder)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get installation groups for Ring")
+	}
+
+	return sqlStore.GetRing(ringID[0])
+}
+
+// DeleteInstallationGroupsFromRing deletes all installation groups registered to the ring.
+func (sqlStore *SQLStore) DeleteInstallationGroupsFromRing(ringID string) ([]*model.InstallationGroup, error) {
+	return sqlStore.deleteInstallationGroupsFromRing(sqlStore.db, ringID)
+}
+
+func (sqlStore *SQLStore) deleteInstallationGroupsFromRing(db dbInterface, ringID string) ([]*model.InstallationGroup, error) {
+	var installationGroups []*model.InstallationGroup
+
+	builder := sq.Select(installationGroupColumns...).
+		From(ringInstallationGroupTable).
+		Where("RingID = ?", ringID).
+		LeftJoin("InstallationGroup ON InstallationGroup.ID=InstallationGroupID")
+	err := sqlStore.selectBuilder(db, &installationGroups, builder)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get installation groups for Ring")
+	}
+
+	for _, ig := range installationGroups {
+		err = sqlStore.DeleteRingInstallationGroup(ringID, ig.ID)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to delete installation group from Ring")
+		}
+
+		err = sqlStore.deleteInstallationGroup(ig)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to delete installation group")
+		}
+	}
+
+	return installationGroups, nil
 }
 
 // GetInstallationGroupsForRings fetches all installation groups registered to rings.
@@ -170,7 +244,11 @@ func (sqlStore *SQLStore) GetInstallationGroupsForRings(filter *model.RingFilter
 	builder := sq.Select(
 		"Ring.ID as RingID",
 		"InstallationGroup.ID as InstallationGroupID",
-		"InstallationGroup.Name as InstallationGroupName").
+		"InstallationGroup.Name as InstallationGroupName",
+		"InstallationGroup.State as InstallationGroupState",
+		"InstallationGroup.ReleaseAt as InstallationGroupReleaseAt",
+		"InstallationGroup.SoakTime as InstallationGroupSoakTime",
+		"InstallationGroup.ProvisionerGroupID as InstallationGroupProvisionerGroupID").
 		From("Ring").
 		LeftJoin(fmt.Sprintf("%s ON %s.RingID = Ring.ID", ringInstallationGroupTable, ringInstallationGroupTable)).
 		Join("InstallationGroup ON InstallationGroup.ID=InstallationGroupID")
@@ -185,7 +263,14 @@ func (sqlStore *SQLStore) GetInstallationGroupsForRings(filter *model.RingFilter
 	for _, rig := range ringInstallationGroups {
 		installationGroups[rig.RingID] = append(
 			installationGroups[rig.RingID],
-			&model.InstallationGroup{ID: rig.InstallationGroupID, Name: rig.InstallationGroupName},
+			&model.InstallationGroup{
+				ID:                 rig.InstallationGroupID,
+				Name:               rig.InstallationGroupName,
+				State:              rig.InstallationGroupState,
+				ReleaseAt:          rig.InstallationGroupReleaseAt,
+				SoakTime:           rig.InstallationGroupSoakTime,
+				ProvisionerGroupID: rig.InstallationGroupProvisionerGroupID,
+			},
 		)
 	}
 
@@ -193,10 +278,10 @@ func (sqlStore *SQLStore) GetInstallationGroupsForRings(filter *model.RingFilter
 }
 
 // DeleteRingInstallationGroup removes an installation group from a given ring.
-func (sqlStore *SQLStore) DeleteRingInstallationGroup(ringID string, installationGroupName string) error {
-	installationGroup, err := sqlStore.GetInstallationGroupByName(installationGroupName)
+func (sqlStore *SQLStore) DeleteRingInstallationGroup(ringID string, installationGroupID string) error {
+	installationGroup, err := sqlStore.GetInstallationGroupByID(installationGroupID)
 	if err != nil {
-		return errors.Wrapf(err, "failed to get installation group '%s' by name", installationGroupName)
+		return errors.Wrapf(err, "failed to get installation group '%s' by id", installationGroupID)
 	}
 	if installationGroup == nil {
 		return nil
@@ -209,6 +294,74 @@ func (sqlStore *SQLStore) DeleteRingInstallationGroup(ringID string, installatio
 	_, err = sqlStore.execBuilder(sqlStore.db, builder)
 	if err != nil {
 		return errors.Wrap(err, "failed to delete ring installation group")
+	}
+
+	return nil
+}
+
+// GetInstallationGroupsPendingWork returns all installation groups in a pending state.
+func (sqlStore *SQLStore) GetInstallationGroupsPendingWork() ([]*model.InstallationGroup, error) {
+	var installationGroups []*model.InstallationGroup
+
+	builder := installationGroupSelect.
+		Where(sq.Eq{
+			"State": model.AllInstallationGroupStatesPendingWork,
+		})
+
+	err := sqlStore.selectBuilder(sqlStore.db, &installationGroups, builder)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to query for installation groups")
+	}
+
+	return installationGroups, nil
+}
+
+// GetRingInstallationGroupsPendingWork returns all installation groups of a specific ring in a pending state.
+func (sqlStore *SQLStore) GetRingInstallationGroupsPendingWork(ringID string) ([]*model.InstallationGroup, error) {
+	var installationGroups []*model.InstallationGroup
+
+	builder := sq.Select(installationGroupColumns...).
+		From(ringInstallationGroupTable).
+		Where("RingID = ?", ringID).
+		Where(sq.Eq{
+			"State": model.AllInstallationGroupStatesPendingWork,
+		}).
+		LeftJoin("InstallationGroup ON InstallationGroup.ID=InstallationGroupID")
+	err := sqlStore.selectBuilder(sqlStore.db, &installationGroups, builder)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get pending installation groups for Ring")
+	}
+
+	return installationGroups, nil
+}
+
+// UpdateInstallationGroup updates the given installation group in the database.
+func (sqlStore *SQLStore) UpdateInstallationGroup(installationGroup *model.InstallationGroup) error {
+
+	if _, err := sqlStore.execBuilder(sqlStore.db, sq.
+		Update("InstallationGroup").
+		SetMap(map[string]interface{}{
+			"Name":               installationGroup.Name,
+			"State":              installationGroup.State,
+			"ReleaseAt":          installationGroup.ReleaseAt,
+			"SoakTime":           installationGroup.SoakTime,
+			"ProvisionerGroupID": installationGroup.ProvisionerGroupID,
+		}).
+		Where("ID = ?", installationGroup.ID),
+	); err != nil {
+		return errors.Wrap(err, "failed to update installation group")
+	}
+
+	return nil
+}
+
+func (sqlStore *SQLStore) deleteInstallationGroup(installationGroup *model.InstallationGroup) error {
+
+	if _, err := sqlStore.execBuilder(sqlStore.db, sq.
+		Delete("InstallationGroup").
+		Where("ID = ?", installationGroup.ID),
+	); err != nil {
+		return errors.Wrap(err, "failed to delete installation group")
 	}
 
 	return nil
