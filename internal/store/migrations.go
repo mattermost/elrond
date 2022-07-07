@@ -56,7 +56,7 @@ var migrations = []migration{
 		if _, err := e.Exec(`
 			CREATE TABLE InstallationGroup (
 				ID TEXT PRIMARY KEY,
-				Name TEXT NOT NULL UNIQUE,
+				Name TEXT NOT NULL,
 				State TEXT NOT NULL,
 				ReleaseAt BIGINT NOT NULL,
 				SoakTime INT NOT NULL,
