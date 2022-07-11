@@ -28,12 +28,6 @@ func TestInstallationGroups_Ring(t *testing.T) {
 	err = sqlStore.CreateInstallationGroup(&installationGroup2)
 	require.NoError(t, err)
 
-	t.Run("fail to create installation group with same name", func(t *testing.T) {
-		err := sqlStore.CreateInstallationGroup(&model.InstallationGroup{Name: installationGroup1.Name})
-		require.Error(t, err)
-		assert.Contains(t, strings.ToLower(err.Error()), "unique constraint") // Make sure error comes from DB
-	})
-
 	t.Run("get installation group by name", func(t *testing.T) {
 		installationGroup, err := sqlStore.GetInstallationGroupByName(installationGroup1.Name)
 		require.NoError(t, err)
