@@ -19,6 +19,10 @@ type installationGroupStore interface {
 	UpdateInstallationGroup(installationGroup *model.InstallationGroup) error
 	GetWebhooks(filter *model.WebhookFilter) ([]*model.Webhook, error)
 	GetRingFromInstallationGroupID(installationGroupID string) (*model.Ring, error)
+	LockRingInstallationGroup(installationGroupID, lockerID string) (bool, error)
+	UnlockRingInstallationGroup(installationGroupID string, lockerID string, force bool) (bool, error)
+	GetInstallationGroupsLocked() ([]*model.InstallationGroup, error)
+	GetInstallationGroupsReleaseInProgress() ([]*model.InstallationGroup, error)
 }
 
 // installationGroupProvisioner abstracts the provisioning operations required by the installation group supervisor.
@@ -72,6 +76,12 @@ func (s *InstallationGroupSupervisor) Supervise(installationGroup *model.Install
 	logger := s.logger.WithFields(log.Fields{
 		"installationgroup": installationGroup.ID,
 	})
+
+	lock := newInstallationGroupLock(installationGroup.ID, s.instanceID, s.store, logger)
+	if !lock.TryLock() {
+		return
+	}
+	defer lock.Unlock()
 
 	// Before working on the installation group, it is crucial that we ensure that it was
 	// not updated to a new state by another elrond server.
@@ -143,21 +153,26 @@ func (s *InstallationGroupSupervisor) transitionInstallationGroup(installationGr
 }
 
 func (s *InstallationGroupSupervisor) checkInstallationGroupPending(installationGroup *model.InstallationGroup, logger log.FieldLogger) string {
-	installationGroups, err := s.store.GetInstallationGroupsPendingWork()
+	logger.Debug("Checking if other Installation Groups are locked...")
+
+	installationGroupsLocked, err := s.store.GetInstallationGroupsLocked()
 	if err != nil {
-		logger.WithError(err).Error("Failed to query for installation groups pending work")
+		logger.WithError(err).Error("Failed to query for installation groups that are under lock")
 		return model.InstallationGroupReleaseFailed
 	}
 
-	logger.Debug("Checking if other Installations Groups are being already updated...")
-	if len(installationGroups) > 0 {
-		for _, ig := range installationGroups {
-			if ig.State != model.InstallationGroupReleasePending {
-				logger.Debug("Another installation group is being updated...")
-				return model.InstallationGroupReleasePending
-			}
-		}
+	installationGroupsReleaseInProgress, err := s.store.GetInstallationGroupsReleaseInProgress()
+	if err != nil {
+		logger.WithError(err).Error("Failed to query for installation groups that are under release")
+		return model.InstallationGroupReleaseFailed
 	}
+
+	//The total installation groups locked at this time will be at least 1
+	if len(installationGroupsLocked) > 1 || len(installationGroupsReleaseInProgress) > 0 {
+		logger.Debug("Another installation group is under lock and being updated...")
+		return model.InstallationGroupReleasePending
+	}
+
 	return model.InstallationGroupReleaseRequested
 }
 
@@ -167,6 +182,7 @@ func (s *InstallationGroupSupervisor) releaseInstallationGroup(installationGroup
 		logger.WithError(err).Error("Failed to get the ring from the installation group pending work")
 		return model.InstallationGroupReleaseFailed
 	}
+
 	err = s.provisioner.ReleaseInstallationGroup(installationGroup, ring)
 	if err != nil {
 		logger.WithError(err).Error("Failed to release installation group")

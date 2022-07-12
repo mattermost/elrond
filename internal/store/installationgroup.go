@@ -24,6 +24,8 @@ var installationGroupColumns = []string{
 	"InstallationGroup.State",
 	"InstallationGroup.SoakTime",
 	"InstallationGroup.ProvisionerGroupID",
+	"InstallationGroup.LockAcquiredBy",
+	"InstallationGroup.LockAcquiredAt",
 }
 
 type ringInstallationGroup struct {
@@ -101,6 +103,8 @@ func (sqlStore *SQLStore) createInstallationGroup(db execer, installationGroup *
 			"ReleaseAt":          installationGroup.ReleaseAt,
 			"SoakTime":           installationGroup.SoakTime,
 			"ProvisionerGroupID": installationGroup.ProvisionerGroupID,
+			"LockAcquiredBy":     nil,
+			"LockAcquiredAt":     0,
 		}))
 	if err != nil {
 		return errors.Wrap(err, "failed to create installation group")
@@ -306,11 +310,45 @@ func (sqlStore *SQLStore) GetInstallationGroupsPendingWork() ([]*model.Installat
 	builder := installationGroupSelect.
 		Where(sq.Eq{
 			"State": model.AllInstallationGroupStatesPendingWork,
-		})
+		}).
+		Where("LockAcquiredAt = 0")
 
 	err := sqlStore.selectBuilder(sqlStore.db, &installationGroups, builder)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to query for installation groups")
+	}
+
+	return installationGroups, nil
+}
+
+// GetInstallationGroupsReleaseInProgress returns all installation groups in a releasing state.
+func (sqlStore *SQLStore) GetInstallationGroupsReleaseInProgress() ([]*model.InstallationGroup, error) {
+	var installationGroups []*model.InstallationGroup
+
+	builder := installationGroupSelect.
+		Where(sq.Eq{
+			"State": model.AllInstallationGroupStatesReleaseInProgress,
+		}).
+		Where("LockAcquiredAt = 0")
+
+	err := sqlStore.selectBuilder(sqlStore.db, &installationGroups, builder)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to query for installation groups")
+	}
+
+	return installationGroups, nil
+}
+
+// GetInstallationGroupsLocked returns all installation groups that are under lock.
+func (sqlStore *SQLStore) GetInstallationGroupsLocked() ([]*model.InstallationGroup, error) {
+	var installationGroups []*model.InstallationGroup
+
+	builder := installationGroupSelect.
+		Where("LockAcquiredAt > 0")
+
+	err := sqlStore.selectBuilder(sqlStore.db, &installationGroups, builder)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to query for locked installation groups")
 	}
 
 	return installationGroups, nil
@@ -365,4 +403,14 @@ func (sqlStore *SQLStore) deleteInstallationGroup(installationGroup *model.Insta
 	}
 
 	return nil
+}
+
+// LockRingInstallationGroup marks the ring as locked for exclusive use by the caller.
+func (sqlStore *SQLStore) LockRingInstallationGroup(installationGroupID, lockerID string) (bool, error) {
+	return sqlStore.lockRows("InstallationGroup", []string{installationGroupID}, lockerID)
+}
+
+// UnlockRingInstallationGroup releases a lock previously acquired against a caller.
+func (sqlStore *SQLStore) UnlockRingInstallationGroup(installationGroupID, lockerID string, force bool) (bool, error) {
+	return sqlStore.unlockRows("InstallationGroup", []string{installationGroupID}, lockerID, force)
 }

@@ -31,7 +31,9 @@ type Store interface {
 	CreateRingInstallationGroup(ringID string, installationGroup *model.InstallationGroup) (*model.InstallationGroup, error)
 	DeleteRingInstallationGroup(ringID string, installationGroup string) error
 	UpdateInstallationGroup(installationGroup *model.InstallationGroup) error
-	GetInstallationGroupByID(id string) (*model.InstallationGroup, error)
+	GetInstallationGroupByID(installationGroupID string) (*model.InstallationGroup, error)
+	LockRingInstallationGroup(installationGroupID, lockerID string) (bool, error)
+	UnlockRingInstallationGroup(installationGroupID, lockerID string, force bool) (bool, error)
 
 	CreateWebhook(webhook *model.Webhook) error
 	GetWebhook(webhookID string) (*model.Webhook, error)

@@ -20,6 +20,8 @@ type InstallationGroup struct {
 	ReleaseAt          int64  `json:"releaseAt,omitempty"`
 	SoakTime           int    `json:"soakTime,omitempty"`
 	ProvisionerGroupID string `json:"provisionerGroupID,omitempty"`
+	LockAcquiredBy     *string
+	LockAcquiredAt     int64
 }
 
 // RegisterInstallationGroupRequest represent parameters passed to register an installation group to the Ring.

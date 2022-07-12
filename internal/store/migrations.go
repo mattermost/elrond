@@ -60,7 +60,9 @@ var migrations = []migration{
 				State TEXT NOT NULL,
 				ReleaseAt BIGINT NOT NULL,
 				SoakTime INT NOT NULL,
-				ProvisionerGroupID TEXT NOT NULL
+				ProvisionerGroupID TEXT NOT NULL,
+				LockAcquiredBy CHAR(26) NULL,
+				LockAcquiredAt BIGINT NOT NULL
 			);
 		`); err != nil {
 			return errors.Wrap(err, "failed to create InstallationGroup table")

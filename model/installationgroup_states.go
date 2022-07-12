@@ -39,6 +39,12 @@ var AllInstallationGroupStatesPendingWork = []string{
 	InstallationGroupReleaseSoakingRequested,
 }
 
+// AllInstallationGroupStatesReleaseInProgress is a list of all installation group states that are part of a release in progress.
+var AllInstallationGroupStatesReleaseInProgress = []string{
+	InstallationGroupReleaseRequested,
+	InstallationGroupReleaseSoakingRequested,
+}
+
 // AllInstallationGroupRequestStates is a list of all states that an installation group can be put in
 // via the API.
 // Warning:
