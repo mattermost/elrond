@@ -5,6 +5,8 @@
 package elrond
 
 import (
+	"time"
+
 	"github.com/mattermost/elrond/model"
 	cmodel "github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
@@ -23,28 +25,53 @@ func (provisioner *ElProvisioner) ReleaseInstallationGroup(installationGroup *mo
 	if err != nil {
 		return errors.Wrapf(err, "failed to get group %s", installationGroup.ProvisionerGroupID)
 	}
+
 	if group.Image != ring.Image || group.Version != ring.Version {
 		logger.Infof("Current provisioner group image is %s:%s and should be updated to %s:%s", group.Image, group.Version, ring.Image, ring.Version)
-		logger.Infof("Updating provisioner group %s", installationGroup.ProvisionerGroupID)
-		_, err := client.UpdateGroup(&cmodel.PatchGroupRequest{
+		request := &cmodel.PatchGroupRequest{
 			ID:      installationGroup.ProvisionerGroupID,
-			Image:   &ring.Image,
 			Version: &ring.Version,
-		})
+			Image:   &ring.Image,
+		}
+
+		logger.Infof("Updating provisioner group %s", installationGroup.ProvisionerGroupID)
+		_, err := client.UpdateGroup(request)
+
 		if err != nil {
 			return errors.Wrap(err, "failed to patch provisioner group")
 		}
 
-		logger.Infof("Update provisioner group %s successful. Checking status...", installationGroup.ProvisionerGroupID)
-		status, err := client.GetGroupStatus(installationGroup.ProvisionerGroupID)
+		wait := 1000
+		logger.Infof("Update provisioner group %s successful. Waiting up to %d seconds for the group release to complete...", installationGroup.ProvisionerGroupID, wait)
+		err = waitForGroupRelease(client, wait, installationGroup.ProvisionerGroupID)
 		if err != nil {
-			return errors.Wrap(err, "failed to get provisioner group status")
+			return err
 		}
-		logger.Info(status.InstallationsTotal)
-
 	} else {
 		logger.Infof("Provisioner group image and version are already up to date with image %s:%s", group.Image, group.Version)
 	}
 
 	return nil
+}
+
+func waitForGroupRelease(client *cmodel.Client, timeout int, groupID string) error {
+	timer := time.NewTimer(time.Duration(timeout) * time.Second)
+	defer timer.Stop()
+
+	for {
+		select {
+		case <-timer.C:
+			return errors.New("timed out waiting for group release to complete")
+		default:
+			status, err := client.GetGroupStatus(groupID)
+			if err != nil {
+				return errors.Wrap(err, "failed to get provisioner group status")
+			}
+			if status.InstallationsAwaitingUpdate == 0 && status.InstallationsUpdating == 0 {
+				return nil
+			}
+			logger.Infof("Provisioner group %s release in progress...", groupID)
+			time.Sleep(60 * time.Second)
+		}
+	}
 }
