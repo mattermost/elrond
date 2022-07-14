@@ -17,9 +17,8 @@ func TestCreateRingRequestValid(t *testing.T) {
 		request      *model.CreateRingRequest
 		requireError bool
 	}{
-		{"defaults", &model.CreateRingRequest{SoakTime: 3600, Priority: 1, InstallationGroups: []string{"test1", "test2"}}, false},
+		{"defaults", &model.CreateRingRequest{SoakTime: 3600, Priority: 1, InstallationGroup: &model.InstallationGroup{Name: "test2"}}, false},
 		{"invalid priority", &model.CreateRingRequest{Priority: 0}, true},
-		{"invalid installation groups", &model.CreateRingRequest{InstallationGroups: []string{""}}, true},
 	}
 
 	for _, tc := range testCases {

@@ -14,27 +14,28 @@ import (
 
 // InstallationGroup represents a provisioner installation group.
 type InstallationGroup struct {
-	ID   string
-	Name string
+	ID                 string `json:"id,omitempty"`
+	Name               string `json:"name,omitempty"`
+	State              string `json:"state,omitempty"`
+	ReleaseAt          int64  `json:"releaseAt,omitempty"`
+	SoakTime           int    `json:"soakTime,omitempty"`
+	ProvisionerGroupID string `json:"provisionerGroupID,omitempty"`
+	LockAcquiredBy     *string
+	LockAcquiredAt     int64
 }
 
-// RegisterInstallationGroupsRequest represent parameters passed to register set of installation groups to the Ring.
-type RegisterInstallationGroupsRequest struct {
-	InstallationGroups []string `json:"installationGroups"`
+// RegisterInstallationGroupRequest represent parameters passed to register an installation group to the Ring.
+type RegisterInstallationGroupRequest struct {
+	Name               string `json:"name,omitempty"`
+	SoakTime           int    `json:"soakTime,omitempty"`
+	ProvisionerGroupID string `json:"provisionerGroupID,omitempty"`
 }
 
-// InstallationGroupsFromStringSlice converts list of strings to list of installation groups.
-func InstallationGroupsFromStringSlice(names []string) ([]*InstallationGroup, error) {
-	if names == nil {
-		return nil, nil
-	}
-
-	installationGroups := make([]*InstallationGroup, 0, len(names))
-	for _, n := range names {
-		installationGroups = append(installationGroups, &InstallationGroup{Name: n})
-	}
-
-	return installationGroups, nil
+// UpdateInstallationGroupRequest specifies the parameters to update an installation group.
+type UpdateInstallationGroupRequest struct {
+	Name               string `json:"name,omitempty"`
+	SoakTime           int    `json:"soakTime,omitempty"`
+	ProvisionerGroupID string `json:"provisionerGroupID,omitempty"`
 }
 
 // SortInstallationGroups sorts installation groups by name alphabetically.
@@ -45,16 +46,26 @@ func SortInstallationGroups(installationGroups []*InstallationGroup) []*Installa
 	return installationGroups
 }
 
-// NewRegisterInstallationGroupsRequestFromReader will create a RegisterInstallationGroupsRequest from an
+// NewRegisterInstallationGroupRequestFromReader will create a RegisterInstallationGroupRequest from an
 // io.Reader with JSON data.
-func NewRegisterInstallationGroupsRequestFromReader(reader io.Reader) (*RegisterInstallationGroupsRequest, error) {
-	var registerInstallationGroupsRequest RegisterInstallationGroupsRequest
-	err := json.NewDecoder(reader).Decode(&registerInstallationGroupsRequest)
+func NewRegisterInstallationGroupRequestFromReader(reader io.Reader) (*RegisterInstallationGroupRequest, error) {
+	var registerInstallationGroupRequest RegisterInstallationGroupRequest
+	err := json.NewDecoder(reader).Decode(&registerInstallationGroupRequest)
 	if err != nil && err != io.EOF {
-		return nil, errors.Wrap(err, "failed to decode register installation groups request")
+		return nil, errors.Wrap(err, "failed to decode register installation group request")
 	}
 
-	return &registerInstallationGroupsRequest, nil
+	return &registerInstallationGroupRequest, nil
+}
+
+// NewUpdateInstallationGroupRequestFromReader will create an UpdateRingRequest from an io.Reader with JSON data.
+func NewUpdateInstallationGroupRequestFromReader(reader io.Reader) (*UpdateInstallationGroupRequest, error) {
+	var updateInstallationGroupRequest UpdateInstallationGroupRequest
+	err := json.NewDecoder(reader).Decode(&updateInstallationGroupRequest)
+	if err != nil && err != io.EOF {
+		return nil, errors.Wrap(err, "failed to decode provision ring request")
+	}
+	return &updateInstallationGroupRequest, nil
 }
 
 // ContainsInstallationGroup determines whether slice of InstallationGroups contains a specific installation group.
@@ -65,4 +76,16 @@ func ContainsInstallationGroup(installationGroups []*InstallationGroup, installa
 		}
 	}
 	return false
+}
+
+// InstallationGroupFromReader decodes a json-encoded ring from the given io.Reader.
+func InstallationGroupFromReader(reader io.Reader) (*InstallationGroup, error) {
+	installationGroup := InstallationGroup{}
+	decoder := json.NewDecoder(reader)
+	err := decoder.Decode(&installationGroup)
+	if err != nil && err != io.EOF {
+		return nil, err
+	}
+
+	return &installationGroup, nil
 }

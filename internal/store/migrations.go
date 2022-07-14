@@ -56,7 +56,13 @@ var migrations = []migration{
 		if _, err := e.Exec(`
 			CREATE TABLE InstallationGroup (
 				ID TEXT PRIMARY KEY,
-				Name TEXT NOT NULL UNIQUE
+				Name TEXT NOT NULL,
+				State TEXT NOT NULL,
+				ReleaseAt BIGINT NOT NULL,
+				SoakTime INT NOT NULL,
+				ProvisionerGroupID TEXT NOT NULL,
+				LockAcquiredBy CHAR(26) NULL,
+				LockAcquiredAt BIGINT NOT NULL
 			);
 		`); err != nil {
 			return errors.Wrap(err, "failed to create InstallationGroup table")

@@ -39,10 +39,12 @@ func init() {
 	serverCmd.PersistentFlags().String("listen", ":3018", "The interface and port on which to listen.")
 	serverCmd.PersistentFlags().Bool("debug", false, "Whether to output debug logs.")
 	serverCmd.PersistentFlags().Bool("machine-readable-logs", false, "Output the logs in machine readable format.")
+	serverCmd.PersistentFlags().String("provisioner-server", "http://localhost:8075", "The provisioning server whose API will be queried.")
 
 	// Supervisors
 	serverCmd.PersistentFlags().Int("poll", 30, "The interval in seconds to poll for background work.")
-	serverCmd.PersistentFlags().Bool("ring-supervisor", true, "Whether this server will run a release supervisor or not.")
+	serverCmd.PersistentFlags().Bool("ring-supervisor", true, "Whether this server will run a ring supervisor or not.")
+	serverCmd.PersistentFlags().Bool("installationgroup-supervisor", true, "Whether this server will run an installation group supervisor or not.")
 }
 
 var serverCmd = &cobra.Command{
@@ -60,6 +62,8 @@ var serverCmd = &cobra.Command{
 		if machineLogs {
 			logger.SetFormatter(&logrus.JSONFormatter{})
 		}
+
+		provisionerServer, _ := command.Flags().GetString("provisioner-server")
 
 		logger := logger.WithField("instance", instanceID)
 
@@ -81,7 +85,8 @@ var serverCmd = &cobra.Command{
 		}
 
 		ringSupervisor, _ := command.Flags().GetBool("ring-supervisor")
-		if !ringSupervisor {
+		installationGroupSupervisor, _ := command.Flags().GetBool("installationgroup-supervisor")
+		if !ringSupervisor && !installationGroupSupervisor {
 			logger.Warn("Server will be running with no supervisors. Only API functionality will work.")
 		}
 
@@ -92,10 +97,11 @@ var serverCmd = &cobra.Command{
 		}
 
 		logger.WithFields(logrus.Fields{
-			"build-hash":        model.BuildHash,
-			"ring-supervisor":   ringSupervisor,
-			"store-version":     currentVersion,
-			"working-directory": wd,
+			"build-hash":                   model.BuildHash,
+			"ring-supervisor":              ringSupervisor,
+			"installationgroup-supervisor": installationGroupSupervisor,
+			"store-version":                currentVersion,
+			"working-directory":            wd,
 		}).Info("Starting Mattermost Elrond Server")
 
 		deprecationWarnings(logger, command)
@@ -103,11 +109,15 @@ var serverCmd = &cobra.Command{
 		// Setup the provisioner.
 		elrondProvisioner := elrond.NewElrondProvisioner(
 			logger,
+			provisionerServer,
 		)
 
 		var multiDoer supervisor.MultiDoer
 		if ringSupervisor {
 			multiDoer = append(multiDoer, supervisor.NewRingSupervisor(sqlStore, elrondProvisioner, instanceID, logger))
+		}
+		if installationGroupSupervisor {
+			multiDoer = append(multiDoer, supervisor.NewInstallationGroupSupervisor(sqlStore, elrondProvisioner, instanceID, logger))
 		}
 
 		// Setup the supervisor to effect any requested changes. It is wrapped in a
@@ -124,10 +134,11 @@ var serverCmd = &cobra.Command{
 		router := mux.NewRouter()
 
 		api.Register(router, &api.Context{
-			Store:      sqlStore,
-			Supervisor: supervisor,
-			Elrond:     elrondProvisioner,
-			Logger:     logger,
+			Store:             sqlStore,
+			Supervisor:        supervisor,
+			Elrond:            elrondProvisioner,
+			Logger:            logger,
+			ProvisionerServer: provisionerServer,
 		})
 
 		listen, _ := command.Flags().GetString("listen")

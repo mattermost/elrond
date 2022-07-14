@@ -10,14 +10,16 @@ import (
 
 // ElProvisioner provisions release rings.
 type ElProvisioner struct {
-	logger log.FieldLogger
+	logger            log.FieldLogger
+	ProvisionerServer string
 }
 
 // NewElrondProvisioner creates a new ElrondProvisioner.
-func NewElrondProvisioner(logger log.FieldLogger) *ElProvisioner {
+func NewElrondProvisioner(logger log.FieldLogger, provisionerServer string) *ElProvisioner {
 	logger = logger.WithField("provisioner", "elrond")
 
 	return &ElProvisioner{
-		logger: logger,
+		logger:            logger,
+		ProvisionerServer: provisionerServer,
 	}
 }

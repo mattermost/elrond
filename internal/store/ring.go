@@ -104,7 +104,7 @@ func (sqlStore *SQLStore) GetUnlockedRingsPendingWork() ([]*model.Ring, error) {
 }
 
 // CreateRing records the given ring to the database, assigning it a unique ID.
-func (sqlStore *SQLStore) CreateRing(ring *model.Ring, installationGroups []*model.InstallationGroup) error {
+func (sqlStore *SQLStore) CreateRing(ring *model.Ring, installationGroup *model.InstallationGroup) error {
 	tx, err := sqlStore.beginTransaction(sqlStore.db)
 	if err != nil {
 		return errors.Wrap(err, "failed to begin transaction")
@@ -115,15 +115,17 @@ func (sqlStore *SQLStore) CreateRing(ring *model.Ring, installationGroups []*mod
 		return errors.Wrap(err, "failed to create ring")
 	}
 
-	if len(installationGroups) > 0 {
-		installationGroups, err := sqlStore.getOrCreateInstallationGroups(tx, installationGroups)
-		if err != nil {
-			return errors.Wrap(err, "failed to get or create installation groups")
-		}
+	if installationGroup != nil {
+		if installationGroup.Name != "" {
+			installationGroup, err := sqlStore.getOrCreateInstallationGroup(tx, installationGroup)
+			if err != nil {
+				return errors.Wrap(err, "failed to get or create installation group")
+			}
 
-		_, err = sqlStore.createRingInstallationGroups(tx, ring.ID, installationGroups)
-		if err != nil {
-			return errors.Wrap(err, "failed to register installation groups for ring")
+			_, err = sqlStore.createRingInstallationGroup(tx, ring.ID, installationGroup)
+			if err != nil {
+				return errors.Wrap(err, "failed to register installation group for ring")
+			}
 		}
 	}
 
@@ -177,6 +179,7 @@ func (sqlStore *SQLStore) UpdateRing(ring *model.Ring) error {
 			"Provisioner": ring.Provisioner,
 			"Image":       ring.Image,
 			"Version":     ring.Version,
+			"ReleaseAt":   ring.ReleaseAt,
 		}).
 		Where("ID = ?", ring.ID),
 	); err != nil {
@@ -197,6 +200,11 @@ func (sqlStore *SQLStore) DeleteRing(id string) error {
 	)
 	if err != nil {
 		return errors.Wrap(err, "failed to mark ring as deleted")
+	}
+
+	_, err = sqlStore.DeleteInstallationGroupsFromRing(id)
+	if err != nil {
+		return errors.Wrap(err, "failed to delete installation groups from deleted ring")
 	}
 
 	return nil

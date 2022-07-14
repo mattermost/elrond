@@ -11,18 +11,28 @@ import (
 )
 
 func init() {
-	ringInstallationGroupRegisterCmd.Flags().StringArray("installation-group", []string{}, "Additional installation groups for the ring. Accepts multiple values, for example: '... --installation-group group-123 --installation-group group-1234'")
+	ringInstallationGroupRegisterCmd.Flags().String("installation-group-name", "", "Additional installation group for the ring.")
 
 	ringInstallationGroupRegisterCmd.Flags().String("ring", "", "The id of the ring to register the installation groups.")
+	ringInstallationGroupRegisterCmd.Flags().String("provisioner-group-id", "", "The id of the provisioner group that will have 1to1 relationship with the elrond installation group.")
+	ringInstallationGroupRegisterCmd.Flags().Int("soak-time", 0, "The soak time to consider an installation group release stable.")
 	ringInstallationGroupRegisterCmd.MarkFlagRequired("ring")
-	ringInstallationGroupRegisterCmd.MarkFlagRequired("installation-group")
+	ringInstallationGroupRegisterCmd.MarkFlagRequired("installation-group-name")
+	ringInstallationGroupRegisterCmd.MarkFlagRequired("provisioner-group-id")
 
-	ringInstallationGroupDeleteCmd.Flags().String("installation-group", "", "Name of the installation group to be removed from the ring.")
+	ringInstallationGroupUpdateCmd.Flags().String("installation-group", "", "The id of the installation group to update.")
+	ringInstallationGroupUpdateCmd.Flags().String("name", "", "The name to set to the installation group.")
+	ringInstallationGroupUpdateCmd.Flags().String("provisioner-group-id", "", "The id of the provisioner group that will have 1to1 relationship with the elrond installation group.")
+	ringInstallationGroupUpdateCmd.Flags().Int("soak-time", 0, "The soak time to set to the installation group.")
+	ringInstallationGroupUpdateCmd.MarkFlagRequired("installation-group")
+
+	ringInstallationGroupDeleteCmd.Flags().String("installation-group", "", "ID of the installation group to be removed from the ring.")
 	ringInstallationGroupDeleteCmd.Flags().String("ring", "", "The id of the ring from which installation group should be removed.")
 	ringInstallationGroupDeleteCmd.MarkFlagRequired("ring")
 	ringInstallationGroupDeleteCmd.MarkFlagRequired("installation-group")
 
 	ringInstallationGroupCmd.AddCommand(ringInstallationGroupRegisterCmd)
+	ringInstallationGroupCmd.AddCommand(ringInstallationGroupUpdateCmd)
 	ringInstallationGroupCmd.AddCommand(ringInstallationGroupDeleteCmd)
 }
 
@@ -41,23 +51,29 @@ var ringInstallationGroupRegisterCmd = &cobra.Command{
 		client := model.NewClient(serverAddress)
 
 		ringID, _ := command.Flags().GetString("ring")
-		installationGroups, _ := command.Flags().GetStringArray("installation-group")
+		installationGroupName, _ := command.Flags().GetString("installation-group-name")
+		soakTime, _ := command.Flags().GetInt("soak-time")
+		provisionerGroupID, _ := command.Flags().GetString("provisioner-group-id")
 
-		request := newAddInstallationGroupsRequest(installationGroups)
+		request := &model.RegisterInstallationGroupRequest{
+			Name:               installationGroupName,
+			SoakTime:           soakTime,
+			ProvisionerGroupID: provisionerGroupID,
+		}
 
 		dryRun, _ := command.Flags().GetBool("dry-run")
 		if dryRun {
 			return runDryRun(request)
 		}
 
-		ring, err := client.RegisterRingInstallationGroups(ringID, request)
+		ring, err := client.RegisterRingInstallationGroup(ringID, request)
 		if err != nil {
-			return errors.Wrap(err, "failed to add ring installation groups")
+			return errors.Wrap(err, "failed to add ring installation group")
 		}
 
 		err = printJSON(ring)
 		if err != nil {
-			return errors.Wrap(err, "failed to print ring installation groups response")
+			return errors.Wrap(err, "failed to print ring installation group response")
 		}
 
 		return nil
@@ -85,10 +101,47 @@ var ringInstallationGroupDeleteCmd = &cobra.Command{
 	},
 }
 
-func newAddInstallationGroupsRequest(installationGroups []string) *model.RegisterInstallationGroupsRequest {
-	return &model.RegisterInstallationGroupsRequest{
-		InstallationGroups: installationGroups,
-	}
+var ringInstallationGroupUpdateCmd = &cobra.Command{
+	Use:   "update",
+	Short: "Updates installation group from the ring.",
+	RunE: func(command *cobra.Command, args []string) error {
+		command.SilenceUsage = true
+
+		serverAddress, _ := command.Flags().GetString("server")
+		client := model.NewClient(serverAddress)
+
+		installationGroupID, _ := command.Flags().GetString("installation-group")
+		name, _ := command.Flags().GetString("name")
+		soakTime, _ := command.Flags().GetInt("soak-time")
+		provisionerGroupID, _ := command.Flags().GetString("provisioner-group-id")
+
+		request := &model.UpdateInstallationGroupRequest{
+			Name:               name,
+			SoakTime:           soakTime,
+			ProvisionerGroupID: provisionerGroupID,
+		}
+
+		dryRun, _ := command.Flags().GetBool("dry-run")
+		if dryRun {
+			err := printJSON(request)
+			if err != nil {
+				return errors.Wrap(err, "failed to print API request")
+			}
+
+			return nil
+		}
+
+		installationGroup, err := client.UpdateInstallationGroup(installationGroupID, request)
+		if err != nil {
+			return errors.Wrap(err, "failed to update installation group")
+		}
+
+		if err = printJSON(installationGroup); err != nil {
+			return errors.Wrapf(err, "failed to print installation group %s response", request.Name)
+		}
+
+		return nil
+	},
 }
 
 func runDryRun(request interface{}) error {

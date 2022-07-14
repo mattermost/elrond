@@ -16,7 +16,7 @@ type Supervisor interface {
 
 // Store describes the interface required to persist changes made via API requests.
 type Store interface {
-	CreateRing(ring *model.Ring, installationGroups []*model.InstallationGroup) error
+	CreateRing(ring *model.Ring, installationGroup *model.InstallationGroup) error
 	GetRing(ringID string) (*model.Ring, error)
 	GetRings(filter *model.RingFilter) ([]*model.Ring, error)
 	UpdateRing(ring *model.Ring) error
@@ -28,8 +28,12 @@ type Store interface {
 
 	GetInstallationGroupsForRings(filter *model.RingFilter) (map[string][]*model.InstallationGroup, error)
 	GetInstallationGroupsForRing(ringID string) ([]*model.InstallationGroup, error)
-	CreateRingInstallationGroups(ringID string, installationGroups []*model.InstallationGroup) ([]*model.InstallationGroup, error)
-	DeleteRingInstallationGroup(ringID string, installationGroups string) error
+	CreateRingInstallationGroup(ringID string, installationGroup *model.InstallationGroup) (*model.InstallationGroup, error)
+	DeleteRingInstallationGroup(ringID string, installationGroup string) error
+	UpdateInstallationGroup(installationGroup *model.InstallationGroup) error
+	GetInstallationGroupByID(installationGroupID string) (*model.InstallationGroup, error)
+	LockRingInstallationGroup(installationGroupID, lockerID string) (bool, error)
+	UnlockRingInstallationGroup(installationGroupID, lockerID string, force bool) (bool, error)
 
 	CreateWebhook(webhook *model.Webhook) error
 	GetWebhook(webhookID string) (*model.Webhook, error)
@@ -47,12 +51,13 @@ type Elrond interface {
 //
 // It is cloned before each request, allowing per-request changes such as logger annotations.
 type Context struct {
-	Store       Store
-	Supervisor  Supervisor
-	Elrond      Elrond
-	RequestID   string
-	Environment string
-	Logger      logrus.FieldLogger
+	Store             Store
+	Supervisor        Supervisor
+	Elrond            Elrond
+	RequestID         string
+	Environment       string
+	Logger            logrus.FieldLogger
+	ProvisionerServer string
 }
 
 // Clone creates a shallow copy of context, allowing clones to apply per-request changes.

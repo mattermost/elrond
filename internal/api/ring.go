@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/pkg/errors"
 
 	"github.com/mattermost/elrond/internal/webhook"
 	"github.com/mattermost/elrond/model"
@@ -31,8 +30,8 @@ func initRing(apiRouter *mux.Router, context *Context) {
 	ringRouter.Handle("/update", addContext(handleUpdateRing)).Methods("POST")
 	ringRouter.Handle("/release", addContext(handleReleaseRing)).Methods("POST")
 	ringRouter.Handle("/release", addContext(handleRetryReleaseRing)).Methods("POST")
-	ringRouter.Handle("/installationgroups", addContext(handleRegisterRingInstallationGroups)).Methods("POST")
-	ringRouter.Handle("/installationgroup/{installation-group-name}", addContext(handleDeleteRingInstallationGroup)).Methods("DELETE")
+	ringRouter.Handle("/installationgroup", addContext(handleRegisterRingInstallationGroup)).Methods("POST")
+	ringRouter.Handle("/installationgroup/{installation-group-id}", addContext(handleDeleteRingInstallationGroup)).Methods("DELETE")
 	ringRouter.Handle("", addContext(handleDeleteRing)).Methods("DELETE")
 }
 
@@ -132,21 +131,25 @@ func handleCreateRing(c *Context, w http.ResponseWriter, r *http.Request) {
 		APISecurityLock: createRingRequest.APISecurityLock,
 		State:           model.RingStateCreationRequested,
 	}
-
-	installationGroups, err := model.InstallationGroupsFromStringSlice(createRingRequest.InstallationGroups)
-	if err != nil {
-		c.Logger.WithError(err).Error("failed to validate installation groups")
-		w.WriteHeader(http.StatusBadRequest)
-		return
+	iGroup := model.InstallationGroup{}
+	if createRingRequest.InstallationGroup != nil {
+		if createRingRequest.InstallationGroup.Name != "" {
+			iGroup = model.InstallationGroup{
+				Name:               createRingRequest.InstallationGroup.Name,
+				State:              model.InstallationGroupStable,
+				ProvisionerGroupID: createRingRequest.InstallationGroup.ProvisionerGroupID,
+				SoakTime:           createRingRequest.InstallationGroup.SoakTime,
+			}
+		}
 	}
 
-	if err = c.Store.CreateRing(&ring, installationGroups); err != nil {
+	if err = c.Store.CreateRing(&ring, &iGroup); err != nil {
 		c.Logger.WithError(err).Error("failed to create ring")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	ring.InstallationGroups = installationGroups
+	ring.InstallationGroups = append(ring.InstallationGroups, &iGroup)
 
 	webhookPayload := &model.WebhookPayload{
 		Type:      model.TypeRing,
@@ -219,7 +222,7 @@ func handleRetryCreateRing(c *Context, w http.ResponseWriter, r *http.Request) {
 }
 
 // handleUpdateRing responds to POST /api/ring/{ring}/update,
-// releasing a deployment in a ring.
+// updating a ring.
 func handleUpdateRing(c *Context, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	ringID := vars["ring"]
@@ -322,22 +325,51 @@ func handleReleaseRing(c *Context, w http.ResponseWriter, r *http.Request) {
 			Timestamp: time.Now().UnixNano(),
 			ExtraData: map[string]string{"Environment": c.Environment},
 		}
-		ring.State = newState
 
-		//ADD LOGIC FOR RING RELEASES
+		if ring.Image != releaseRingRequest.Image || ring.Version != releaseRingRequest.Version {
 
-		c.Logger.Info(releaseRingRequest)
+			ring.State = newState
+			ring.Image = releaseRingRequest.Image
+			ring.Version = releaseRingRequest.Version
 
-		if err = c.Store.UpdateRing(ring); err != nil {
-			c.Logger.WithError(err).Error("failed to update ring")
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
+			c.Logger.Info(releaseRingRequest)
 
-		//TODO Set here the release logic
+			if err = c.Store.UpdateRing(ring); err != nil {
+				c.Logger.WithError(err).Error("failed to update ring")
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			installationGroups, err := c.Store.GetInstallationGroupsForRing(ringID)
+			if err != nil {
+				c.Logger.WithError(err).Error("failed to get installation groups for ring")
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
 
-		if err := webhook.SendToAllWebhooks(c.Store, webhookPayload, c.Logger.WithField("webhookEvent", webhookPayload.NewState)); err != nil {
-			c.Logger.WithError(err).Error("unable to process and send webhooks")
+			ring.InstallationGroups = installationGroups
+
+			for _, ig := range ring.InstallationGroups {
+				newInstallationGroupState := model.InstallationGroupReleasePending
+
+				c.Logger.Infof("Setting Installation group %s to %s state", ig.Name, newInstallationGroupState)
+
+				if !ig.ValidInstallationGroupTransitionState(newInstallationGroupState) {
+					c.Logger.Warnf("Unable to change installation group state change while in state %s", ig.State)
+					w.WriteHeader(http.StatusBadRequest)
+					return
+				}
+
+				ig.State = model.InstallationGroupReleasePending
+				if err = c.Store.UpdateInstallationGroup(ig); err != nil {
+					c.Logger.WithError(err).Error("failed to update installation group")
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
+			}
+
+			if err := webhook.SendToAllWebhooks(c.Store, webhookPayload, c.Logger.WithField("webhookEvent", webhookPayload.NewState)); err != nil {
+				c.Logger.WithError(err).Error("unable to process and send webhooks")
+			}
 		}
 	}
 
@@ -457,9 +489,9 @@ func handleDeleteRing(c *Context, w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusAccepted)
 }
 
-// handleRegisterRingInstallationGroups responds to POST /api/ring/{ring}/installationgroups,
+// handleRegisterRingInstallationGroup responds to POST /api/ring/{ring}/installationgroup,
 // registers the set of installation groups to the Ring.
-func handleRegisterRingInstallationGroups(c *Context, w http.ResponseWriter, r *http.Request) {
+func handleRegisterRingInstallationGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	ringID := vars["ring"]
 	c.Logger = c.Logger.WithField("ring", ringID).WithField("action", "register-ring-installation-groups")
@@ -476,37 +508,44 @@ func handleRegisterRingInstallationGroups(c *Context, w http.ResponseWriter, r *
 		return
 	}
 
-	installationGroups, err := installationGroupsFromRequest(r)
+	installationGroupRequest, err := model.NewRegisterInstallationGroupRequestFromReader(r.Body)
 	if err != nil {
-		c.Logger.WithError(err).Error("failed to get installation groups from request")
-		w.WriteHeader(http.StatusBadRequest)
+		c.Logger.WithError(err).Error("failed to decode request")
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	installationGroups, err = c.Store.CreateRingInstallationGroups(ringID, installationGroups)
+	iGroup := model.InstallationGroup{
+		Name:               installationGroupRequest.Name,
+		SoakTime:           installationGroupRequest.SoakTime,
+		State:              model.InstallationGroupStable,
+		ProvisionerGroupID: installationGroupRequest.ProvisionerGroupID,
+	}
+
+	installationGroup, err := c.Store.CreateRingInstallationGroup(ringID, &iGroup)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to create ring installation groups")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	ring.InstallationGroups = append(ring.InstallationGroups, installationGroups...)
+	ring.InstallationGroups = append(ring.InstallationGroups, installationGroup)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	outputJSON(c, w, ring)
 }
 
-// handleDeleteRingInstallationGroup responds to DELETE /api/ring/{ring}/installationgroup/{installation-group-name},
+// handleDeleteRingInstallationGroup responds to DELETE /api/ring/{ring}/installationgroup/{installation-group-id},
 // removes installation group from the Ring.
 func handleDeleteRingInstallationGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	ringID := vars["ring"]
-	installationGroupName := vars["installation-group-name"]
+	installationGroupID := vars["installation-group-id"]
 	c.Logger = c.Logger.
 		WithField("ring", ringID).
-		WithField("action", "delete-ring-installatio-group").
-		WithField("installation-group-name", installationGroupName)
+		WithField("action", "delete-ring-installation-group").
+		WithField("installation-group-id", installationGroupID)
 
 	ring, status, unlockOnce := lockRing(c, ringID)
 	if status != 0 {
@@ -521,7 +560,7 @@ func handleDeleteRingInstallationGroup(c *Context, w http.ResponseWriter, r *htt
 		return
 	}
 
-	err := c.Store.DeleteRingInstallationGroup(ringID, installationGroupName)
+	err := c.Store.DeleteRingInstallationGroup(ringID, installationGroupID)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed delete ring installation group")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -530,19 +569,4 @@ func handleDeleteRingInstallationGroup(c *Context, w http.ResponseWriter, r *htt
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusNoContent)
-}
-
-func installationGroupsFromRequest(req *http.Request) ([]*model.InstallationGroup, error) {
-	installationGroupsRequest, err := model.NewRegisterInstallationGroupsRequestFromReader(req.Body)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to decode request")
-	}
-	defer req.Body.Close()
-
-	installationGroups, err := model.InstallationGroupsFromStringSlice(installationGroupsRequest.InstallationGroups)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to validate installation groups")
-	}
-
-	return installationGroups, nil
 }

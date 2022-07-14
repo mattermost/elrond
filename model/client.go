@@ -329,9 +329,9 @@ func (c *Client) makeSecurityCall(resourceType, id, securityType, action string)
 
 }
 
-// RegisterRingInstallationGroups registers installation groups to the given ring.
-func (c *Client) RegisterRingInstallationGroups(ringID string, installationGroupsRequest *RegisterInstallationGroupsRequest) (*Ring, error) {
-	resp, err := c.doPost(c.buildURL("/api/ring/%s/installationgroups", ringID), installationGroupsRequest)
+// RegisterRingInstallationGroup registers an installation group to the given ring.
+func (c *Client) RegisterRingInstallationGroup(ringID string, installationGroupRequest *RegisterInstallationGroupRequest) (*Ring, error) {
+	resp, err := c.doPost(c.buildURL("/api/ring/%s/installationgroup", ringID), installationGroupRequest)
 	if err != nil {
 		return nil, err
 	}
@@ -347,8 +347,8 @@ func (c *Client) RegisterRingInstallationGroups(ringID string, installationGroup
 }
 
 // DeleteRingInstallationGroup deletes installation group from the given ring.
-func (c *Client) DeleteRingInstallationGroup(ringID string, installationGroupName string) error {
-	resp, err := c.doDelete(c.buildURL("/api/ring/%s/installationgroup/%s", ringID, installationGroupName))
+func (c *Client) DeleteRingInstallationGroup(ringID string, installationGroupID string) error {
+	resp, err := c.doDelete(c.buildURL("/api/ring/%s/installationgroup/%s", ringID, installationGroupID))
 	if err != nil {
 		return err
 	}
@@ -360,5 +360,21 @@ func (c *Client) DeleteRingInstallationGroup(ringID string, installationGroupNam
 
 	default:
 		return errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
+// UpdateInstallationGroup requests the update of an installation group from the configured elrond server.
+func (c *Client) UpdateInstallationGroup(installationGroup string, request *UpdateInstallationGroupRequest) (*InstallationGroup, error) {
+	resp, err := c.doPost(c.buildURL("/api/installationgroup/%s/update", installationGroup), request)
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusAccepted:
+		return InstallationGroupFromReader(resp.Body)
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
 	}
 }

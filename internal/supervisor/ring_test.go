@@ -40,7 +40,7 @@ func (s *mockRingStore) UpdateRing(Ring *model.Ring) error {
 	return nil
 }
 
-func (s *mockRingStore) CreateRing(Ring *model.Ring, installationGroups []*model.InstallationGroup) error {
+func (s *mockRingStore) CreateRing(Ring *model.Ring, installationGroup *model.InstallationGroup) error {
 	return nil
 }
 
@@ -60,6 +60,10 @@ func (s *mockRingStore) DeleteRing(RingID string) error {
 }
 
 func (s *mockRingStore) GetWebhooks(filter *model.WebhookFilter) ([]*model.Webhook, error) {
+	return nil, nil
+}
+
+func (s *mockRingStore) GetRingInstallationGroupsPendingWork(ringID string) ([]*model.InstallationGroup, error) {
 	return nil, nil
 }
 
@@ -144,9 +148,9 @@ func TestRingSupervisorSupervise(t *testing.T) {
 				State: tc.InitialState,
 			}
 
-			installationGroups := []*model.InstallationGroup{{Name: "group1"}, {Name: "group2"}}
+			installationGroup := model.InstallationGroup{Name: "group1"}
 
-			err := sqlStore.CreateRing(Ring, installationGroups)
+			err := sqlStore.CreateRing(Ring, &installationGroup)
 			require.NoError(t, err)
 
 			supervisor.Supervise(Ring)
@@ -165,9 +169,9 @@ func TestRingSupervisorSupervise(t *testing.T) {
 		Ring := &model.Ring{
 			State: model.RingStateDeletionRequested,
 		}
-		installationGroups := []*model.InstallationGroup{{Name: "group1"}, {Name: "group2"}}
+		installationGroup := model.InstallationGroup{Name: "group2"}
 
-		err := sqlStore.CreateRing(Ring, installationGroups)
+		err := sqlStore.CreateRing(Ring, &installationGroup)
 		require.NoError(t, err)
 
 		// The stored Ring is RingStateDeletionRequested, so we will pass

@@ -16,9 +16,11 @@ import (
 func TestNewCreateRingRequestFromReader(t *testing.T) {
 	defaultCreateRingRequest := func() *model.CreateRingRequest {
 		return &model.CreateRingRequest{
-			Priority:           1,
-			InstallationGroups: []string{"prod-12345", "prod-1234567"},
-			SoakTime:           7200,
+			Priority: 1,
+			InstallationGroup: &model.InstallationGroup{
+				Name: "prod-1234",
+			},
+			SoakTime: 7200,
 		}
 	}
 
@@ -32,7 +34,7 @@ func TestNewCreateRingRequestFromReader(t *testing.T) {
 
 	t.Run("partial request", func(t *testing.T) {
 		ringRequest, err := model.NewCreateRingRequestFromReader(bytes.NewReader([]byte(
-			`{"Priority": 2, "InstallationGroups": ["prod-12345", "prod-1234567"]}`,
+			`{"Priority": 2, "InstallationGroup": {"Name": "prod-1234"}}`,
 		)))
 		require.NoError(t, err)
 		modifiedDefaultCreateRingRequest := defaultCreateRingRequest()
@@ -42,14 +44,16 @@ func TestNewCreateRingRequestFromReader(t *testing.T) {
 
 	t.Run("full request", func(t *testing.T) {
 		ringRequest, err := model.NewCreateRingRequestFromReader(bytes.NewReader([]byte(
-			`{"InstallationGroups": ["prod-12345"], "Priority": 2, "Name": "test"}`,
+			`{"InstallationGroup": {"Name": "prod-12345"}, "Priority": 2, "Name": "test"}`,
 		)))
 		require.NoError(t, err)
 		require.Equal(t, &model.CreateRingRequest{
-			Priority:           2,
-			InstallationGroups: []string{"prod-12345"},
-			Name:               "test",
-			SoakTime:           7200,
+			Priority: 2,
+			InstallationGroup: &model.InstallationGroup{
+				Name: "prod-12345",
+			},
+			Name:     "test",
+			SoakTime: 7200,
 		}, ringRequest)
 	})
 }

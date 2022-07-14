@@ -37,9 +37,9 @@ func TestRings(t *testing.T) {
 			State:       model.RingStateCreationRequested,
 		}
 
-		installationGroups := []*model.InstallationGroup{{Name: "12345"}, {Name: "123456"}}
+		installationGroup := model.InstallationGroup{Name: "12345"}
 
-		err := sqlStore.CreateRing(ring1, installationGroups)
+		err := sqlStore.CreateRing(ring1, &installationGroup)
 		require.NoError(t, err)
 
 		actualRing1, err := sqlStore.GetRing(ring1.ID)
@@ -84,9 +84,9 @@ func TestRings(t *testing.T) {
 			State:       model.RingStateCreationRequested,
 		}
 
-		installationGroups := []*model.InstallationGroup{{Name: "group1"}, {Name: "group2"}}
+		installationGroup := model.InstallationGroup{Name: "group2"}
 
-		err := sqlStore.CreateRing(ring1, installationGroups)
+		err := sqlStore.CreateRing(ring1, &installationGroup)
 		require.NoError(t, err)
 
 		ring1.Priority = 2
@@ -114,9 +114,9 @@ func TestRings(t *testing.T) {
 			State:       model.RingStateCreationRequested,
 		}
 
-		installationGroups := []*model.InstallationGroup{{Name: "group1"}, {Name: "group2"}}
+		installationGroup := model.InstallationGroup{Name: "group1"}
 
-		err := sqlStore.CreateRing(ring1, installationGroups)
+		err := sqlStore.CreateRing(ring1, &installationGroup)
 		require.NoError(t, err)
 
 		err = sqlStore.DeleteRing(ring1.ID)

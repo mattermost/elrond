@@ -13,17 +13,17 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// ringStore abstracts the database operations required to query rings.
+// ringStore abstracts the database operations required to manage rings.
 type ringStore interface {
 	GetRing(ringID string) (*model.Ring, error)
 	GetUnlockedRingsPendingWork() ([]*model.Ring, error)
 	GetRings(ringFilter *model.RingFilter) ([]*model.Ring, error)
-	CreateRing(ring *model.Ring, installationGroups []*model.InstallationGroup) error
+	CreateRing(ring *model.Ring, installationGroup *model.InstallationGroup) error
 	UpdateRing(ring *model.Ring) error
 	LockRing(ringID, lockerID string) (bool, error)
 	UnlockRing(ringID string, lockerID string, force bool) (bool, error)
 	DeleteRing(ringID string) error
-
+	GetRingInstallationGroupsPendingWork(ringID string) ([]*model.InstallationGroup, error)
 	GetWebhooks(filter *model.WebhookFilter) ([]*model.Webhook, error)
 }
 
@@ -121,6 +121,11 @@ func (s *RingSupervisor) Supervise(ring *model.Ring) {
 
 	oldState := ring.State
 	ring.State = newState
+
+	if oldState == model.RingStateSoakingRequested && newState == model.RingStateStable {
+		ring.ReleaseAt = time.Now().UnixNano()
+	}
+
 	if err = s.store.UpdateRing(ring); err != nil {
 		logger.WithError(err).Warnf("failed to set ring state to %s", newState)
 		return
@@ -147,6 +152,8 @@ func (s *RingSupervisor) transitionRing(ring *model.Ring, logger log.FieldLogger
 		return s.createRing(ring, logger)
 	case model.RingStateReleaseRequested:
 		return s.releaseRing(ring, logger)
+	case model.RingStateReleaseInProgress:
+		return s.checkReleaseProgress(ring, logger)
 	case model.RingStateSoakingRequested:
 		return s.soakRing(ring, logger)
 	case model.RingStateDeletionRequested:
@@ -183,6 +190,32 @@ func (s *RingSupervisor) releaseRing(ring *model.Ring, logger log.FieldLogger) s
 	if err != nil {
 		logger.WithError(err).Error("Failed to release ring")
 		return model.RingStateReleaseFailed
+	}
+
+	installationGroups, err := s.store.GetRingInstallationGroupsPendingWork(ring.ID)
+	if err != nil {
+		logger.WithError(err).Error("Failed to get ring installation groups pending work")
+		return model.RingStateReleaseFailed
+	}
+	if len(installationGroups) > 0 {
+		logger.Info("There are installation groups pending work...")
+		return model.RingStateReleaseInProgress
+	}
+
+	logger.Info("Finished releasing ring")
+	return model.RingStateSoakingRequested
+}
+
+func (s *RingSupervisor) checkReleaseProgress(ring *model.Ring, logger log.FieldLogger) string {
+
+	installationGroups, err := s.store.GetRingInstallationGroupsPendingWork(ring.ID)
+	if err != nil {
+		logger.WithError(err).Error("Failed to get ring installation groups pending work")
+		return model.RingStateReleaseFailed
+	}
+	if len(installationGroups) > 0 {
+		logger.Info("There are installation groups pending work...")
+		return model.RingStateReleaseInProgress
 	}
 
 	logger.Info("Finished releasing ring")
