@@ -6,6 +6,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/url"
 	"os"
 	"strconv"
@@ -46,8 +47,7 @@ func init() {
 	ringReleaseCmd.Flags().String("ring", "", "The id of the ring to be released.")
 	ringReleaseCmd.Flags().String("image", "", "The Mattermost image to release to.")
 	ringReleaseCmd.Flags().String("version", "", "The Mattermost version to release to.")
-
-	ringReleaseCmd.MarkFlagRequired("ring") //nolint
+	ringReleaseCmd.Flags().Bool("all-rings", false, "Whether all rings should be released.")
 
 	ringDeleteCmd.Flags().String("ring", "", "The id of the ring to be deleted.")
 	ringDeleteCmd.MarkFlagRequired("ring") //nolint
@@ -206,6 +206,7 @@ var ringReleaseCmd = &cobra.Command{
 		ringID, _ := command.Flags().GetString("ring")
 		image, _ := command.Flags().GetString("image")
 		version, _ := command.Flags().GetString("version")
+		releaseAllRings, _ := command.Flags().GetBool("all-rings")
 
 		request := &model.ReleaseRingRequest{
 			Image:   image,
@@ -222,13 +223,22 @@ var ringReleaseCmd = &cobra.Command{
 			return nil
 		}
 
-		ring, err := client.ReleaseRing(ringID, request)
-		if err != nil {
-			return errors.Wrapf(err, "failed to release a ring %s", ringID)
-		}
-
-		if err = printJSON(ring); err != nil {
-			return errors.Wrapf(err, "failed to print ring %s release response", ringID)
+		if releaseAllRings {
+			rings, err := client.ReleaseAllRings(request)
+			if err != nil {
+				return errors.Wrap(err, "failed to achieve an all rings release")
+			}
+			if err = printJSON(rings); err != nil {
+				return errors.Wrapf(err, "failed to print release response for an all rings release", ringID)
+			}
+		} else {
+			ring, err := client.ReleaseRing(ringID, request)
+			if err != nil {
+				return errors.Wrapf(err, "failed to release a ring %s", ringID)
+			}
+			if err = printJSON(ring); err != nil {
+				return errors.Wrapf(err, "failed to print ring %s release response", ringID)
+			}
 		}
 
 		return nil
@@ -318,13 +328,14 @@ var ringListCmd = &cobra.Command{
 		if outputToTable {
 			table := tablewriter.NewWriter(os.Stdout)
 			table.SetAlignment(tablewriter.ALIGN_LEFT)
+			table.SetRowLine(true)
 			table.SetHeader([]string{"ID", "STATE", "NAME", "PRIORITY", "INSTALLATION GROUPS", "SOAK TIME", "IMAGE", "VERSION"})
 
 			for _, ring := range rings {
 				var igs []string
 				if len(ring.InstallationGroups) > 0 {
 					for _, ig := range ring.InstallationGroups {
-						igs = append(igs, ig.Name)
+						igs = append(igs, fmt.Sprintf("%s -> %s", ig.Name, ig.State))
 					}
 
 				}
@@ -333,7 +344,7 @@ var ringListCmd = &cobra.Command{
 					ring.State,
 					ring.Name,
 					strconv.Itoa(ring.Priority),
-					strings.Join(igs, ", "),
+					strings.Join(igs, "\n"),
 					strconv.Itoa(ring.SoakTime),
 					ring.Image,
 					ring.Version,

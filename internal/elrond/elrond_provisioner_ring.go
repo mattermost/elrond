@@ -18,7 +18,7 @@ func (provisioner *ElProvisioner) PrepareRing(ring *model.Ring) bool {
 // CreateRing creates a ring.
 func (provisioner *ElProvisioner) CreateRing(ring *model.Ring) error {
 	logger := provisioner.logger.WithField("ring", ring.ID)
-	logger.Info("Creating ring")
+	logger.Infof("Creating ring %s", ring.ID)
 	// err := createRing(provisioner, ring, logger)
 	// if err != nil {
 	// 	return err
@@ -30,7 +30,7 @@ func (provisioner *ElProvisioner) CreateRing(ring *model.Ring) error {
 // DeleteRing deletes a ring.
 func (provisioner *ElProvisioner) DeleteRing(ring *model.Ring) error {
 	logger := provisioner.logger.WithField("ring", ring.ID)
-	logger.Info("Deleting ring")
+	logger.Infof("Deleting ring %s", ring.ID)
 	// err := deleteRing(provisioner, ring, logger)
 	// if err != nil {
 	// 	return err
@@ -41,7 +41,7 @@ func (provisioner *ElProvisioner) DeleteRing(ring *model.Ring) error {
 // ReleaseRing releases a ring.
 func (provisioner *ElProvisioner) ReleaseRing(ring *model.Ring) error {
 	logger := provisioner.logger.WithField("ring", ring.ID)
-	logger.Info("Releasing ring")
+	logger.Infof("Releasing ring %s", ring.ID)
 	// err := releaseRing(provisioner, ring, logger)
 	// if err != nil {
 	// 	return err
@@ -52,7 +52,7 @@ func (provisioner *ElProvisioner) ReleaseRing(ring *model.Ring) error {
 // RollBackRing rolls back a ring.
 func (provisioner *ElProvisioner) RollBackRing(ring *model.Ring) error {
 	logger := provisioner.logger.WithField("ring", ring.ID)
-	logger.Info("Rolling back ring")
+	logger.Infof("Rolling back ring %s", ring.ID)
 	// err := releaseRing(provisioner, ring, logger)
 	// if err != nil {
 	// 	return err
@@ -63,7 +63,7 @@ func (provisioner *ElProvisioner) RollBackRing(ring *model.Ring) error {
 // SoakRing rolls back a ring.
 func (provisioner *ElProvisioner) SoakRing(ring *model.Ring) error {
 	logger := provisioner.logger.WithField("ring", ring.ID)
-	logger.Info("Soaking ring")
+	logger.Infof("Soaking ring %s", ring.ID)
 	// err := soakRing(provisioner, ring, logger)
 	// if err != nil {
 	// 	return err

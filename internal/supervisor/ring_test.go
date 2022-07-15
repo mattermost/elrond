@@ -133,6 +133,7 @@ func TestRingSupervisorSupervise(t *testing.T) {
 	}{
 		{"unexpected state", model.RingStateStable, model.RingStateStable},
 		{"creation requested", model.RingStateCreationRequested, model.RingStateStable},
+		{"release pending", model.RingStateReleasePending, model.RingStateReleaseRequested},
 		{"release requested", model.RingStateReleaseRequested, model.RingStateSoakingRequested},
 		{"soaking requested", model.RingStateSoakingRequested, model.RingStateStable},
 		{"rollback requested", model.RingStateReleaseRollbackRequested, model.RingStateReleaseRollbackComplete},

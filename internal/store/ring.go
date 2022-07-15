@@ -103,6 +103,39 @@ func (sqlStore *SQLStore) GetUnlockedRingsPendingWork() ([]*model.Ring, error) {
 	return rawRings.toRings()
 }
 
+// GetRingsLocked returns all rings that are under lock.
+func (sqlStore *SQLStore) GetRingsLocked() ([]*model.Ring, error) {
+	var rings []*model.Ring
+
+	builder := ringSelect.
+		Where("LockAcquiredAt > 0")
+
+	err := sqlStore.selectBuilder(sqlStore.db, &rings, builder)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to query for locked rings")
+	}
+
+	return rings, nil
+}
+
+// GetRingsReleaseInProgress returns all rings in a releasing state.
+func (sqlStore *SQLStore) GetRingsReleaseInProgress() ([]*model.Ring, error) {
+	var rings []*model.Ring
+
+	builder := ringSelect.
+		Where(sq.Eq{
+			"State": model.AllRingStatesReleaseInProgress,
+		}).
+		Where("LockAcquiredAt = 0")
+
+	err := sqlStore.selectBuilder(sqlStore.db, &rings, builder)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to query for rings")
+	}
+
+	return rings, nil
+}
+
 // CreateRing records the given ring to the database, assigning it a unique ID.
 func (sqlStore *SQLStore) CreateRing(ring *model.Ring, installationGroup *model.InstallationGroup) error {
 	tx, err := sqlStore.beginTransaction(sqlStore.db)
