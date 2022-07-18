@@ -40,6 +40,7 @@ func init() {
 	serverCmd.PersistentFlags().Bool("debug", false, "Whether to output debug logs.")
 	serverCmd.PersistentFlags().Bool("machine-readable-logs", false, "Output the logs in machine readable format.")
 	serverCmd.PersistentFlags().String("provisioner-server", "http://localhost:8075", "The provisioning server whose API will be queried.")
+	serverCmd.PersistentFlags().Int("provisioner-group-release-timeout", 3600, "The provisioner group release timeout")
 
 	// Supervisors
 	serverCmd.PersistentFlags().Int("poll", 30, "The interval in seconds to poll for background work.")
@@ -64,6 +65,8 @@ var serverCmd = &cobra.Command{
 		}
 
 		provisionerServer, _ := command.Flags().GetString("provisioner-server")
+
+		provisionerGroupReleaseTimeout, _ := command.Flags().GetInt("provisioner-group-release-timeout")
 
 		logger := logger.WithField("instance", instanceID)
 
@@ -106,8 +109,13 @@ var serverCmd = &cobra.Command{
 
 		deprecationWarnings(logger, command)
 
+		provisioningParams := elrond.ProvisioningParams{
+			ProvisionerGroupReleaseTimeout: provisionerGroupReleaseTimeout,
+		}
+
 		// Setup the provisioner.
 		elrondProvisioner := elrond.NewElrondProvisioner(
+			provisioningParams,
 			logger,
 			provisionerServer,
 		)

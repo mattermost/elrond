@@ -329,7 +329,7 @@ var ringListCmd = &cobra.Command{
 			table := tablewriter.NewWriter(os.Stdout)
 			table.SetAlignment(tablewriter.ALIGN_LEFT)
 			table.SetRowLine(true)
-			table.SetHeader([]string{"ID", "STATE", "NAME", "PRIORITY", "INSTALLATION GROUPS", "SOAK TIME", "IMAGE", "VERSION"})
+			table.SetHeader([]string{"ID", "STATE", "NAME", "PRIORITY", "INSTALLATION GROUPS", "SOAK TIME", "IMAGE", "VERSION", "RELEASE AT"})
 
 			for _, ring := range rings {
 				var igs []string
@@ -348,6 +348,7 @@ var ringListCmd = &cobra.Command{
 					strconv.Itoa(ring.SoakTime),
 					ring.Image,
 					ring.Version,
+					strconv.FormatInt(ring.ReleaseAt, 10),
 				})
 			}
 			table.Render()

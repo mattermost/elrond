@@ -124,7 +124,7 @@ func (s *RingSupervisor) Supervise(ring *model.Ring) {
 	oldState := ring.State
 	ring.State = newState
 
-	if oldState == model.RingStateSoakingRequested && newState == model.RingStateStable {
+	if oldState == model.RingStateReleaseInProgress && newState == model.RingStateSoakingRequested {
 		ring.ReleaseAt = time.Now().UnixNano()
 	}
 
@@ -265,6 +265,13 @@ func (s *RingSupervisor) checkReleaseProgress(ring *model.Ring, logger log.Field
 }
 
 func (s *RingSupervisor) soakRing(ring *model.Ring, logger log.FieldLogger) string {
+
+	timePassed := ((time.Now().UnixNano() - ring.ReleaseAt) / int64(time.Second))
+	if timePassed < int64(ring.SoakTime) {
+		logger.Infof("Ring %s will be soaking for another %d seconds...", ring.ID, int64(ring.SoakTime)-timePassed)
+		return model.RingStateSoakingRequested
+	}
+
 	err := s.provisioner.SoakRing(ring)
 	if err != nil {
 		logger.WithError(err).Error("Failed to soak ring")
@@ -272,6 +279,7 @@ func (s *RingSupervisor) soakRing(ring *model.Ring, logger log.FieldLogger) stri
 	}
 
 	logger.Infof("Finished soaking ring %s", ring.ID)
+	logger.Infof("Ring %s release is now complete. Setting ring to stable.", ring.ID)
 	return model.RingStateStable
 }
 
