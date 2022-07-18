@@ -35,6 +35,14 @@ func (s *mockRingStore) GetRings(RingFilter *model.RingFilter) ([]*model.Ring, e
 	return s.Rings, nil
 }
 
+func (s *mockRingStore) GetRingsLocked() ([]*model.Ring, error) {
+	return s.Rings, nil
+}
+
+func (s *mockRingStore) GetRingsReleaseInProgress() ([]*model.Ring, error) {
+	return s.Rings, nil
+}
+
 func (s *mockRingStore) UpdateRing(Ring *model.Ring) error {
 	s.UpdateRingCalls++
 	return nil
