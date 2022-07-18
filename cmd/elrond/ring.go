@@ -229,7 +229,7 @@ var ringReleaseCmd = &cobra.Command{
 				return errors.Wrap(err, "failed to achieve an all rings release")
 			}
 			if err = printJSON(rings); err != nil {
-				return errors.Wrapf(err, "failed to print release response for an all rings release", ringID)
+				return errors.Wrap(err, "failed to print release response for an all rings release")
 			}
 		} else {
 			ring, err := client.ReleaseRing(ringID, request)
