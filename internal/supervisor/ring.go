@@ -263,6 +263,8 @@ func (s *RingSupervisor) checkRingReleasePending(ring *model.Ring, logger log.Fi
 			return model.RingStateReleaseFailed
 		}
 
+		logger.Infof("Setting Installation group %s to %s state", ig.Name, newInstallationGroupState)
+
 		ig.State = model.InstallationGroupReleasePending
 		if err = s.store.UpdateInstallationGroup(ig); err != nil {
 			logger.WithError(err).Error("failed to update installation group")

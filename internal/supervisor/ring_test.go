@@ -75,6 +75,14 @@ func (s *mockRingStore) GetRingInstallationGroupsPendingWork(ringID string) ([]*
 	return nil, nil
 }
 
+func (s *mockRingStore) GetInstallationGroupsForRing(ringID string) ([]*model.InstallationGroup, error) {
+	return nil, nil
+}
+
+func (s *mockRingStore) UpdateInstallationGroup(installationGroup *model.InstallationGroup) error {
+	return nil
+}
+
 type mockRingProvisioner struct{}
 
 func (p *mockRingProvisioner) PrepareRing(Ring *model.Ring) bool {
@@ -157,7 +165,10 @@ func TestRingSupervisorSupervise(t *testing.T) {
 				State: tc.InitialState,
 			}
 
-			installationGroup := model.InstallationGroup{Name: "group1"}
+			installationGroup := model.InstallationGroup{
+				Name:  "group1",
+				State: model.InstallationGroupStable,
+			}
 
 			err := sqlStore.CreateRing(Ring, &installationGroup)
 			require.NoError(t, err)
