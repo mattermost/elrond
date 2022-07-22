@@ -199,6 +199,30 @@ func (sqlStore *SQLStore) createRing(execer execer, ring *model.Ring) error {
 	return nil
 }
 
+// updateRings updates the given rings to the database when a single transaction is needed.
+func (sqlStore *SQLStore) updateRings(execer execer, rings []*model.Ring) error {
+	for _, ring := range rings {
+		if _, err := sqlStore.execBuilder(execer, sq.
+			Update("Ring").
+			SetMap(map[string]interface{}{
+				"Name":        ring.Name,
+				"Priority":    ring.Priority,
+				"State":       ring.State,
+				"SoakTime":    ring.SoakTime,
+				"Provisioner": ring.Provisioner,
+				"Image":       ring.Image,
+				"Version":     ring.Version,
+				"ReleaseAt":   ring.ReleaseAt,
+			}).
+			Where("ID = ?", ring.ID),
+		); err != nil {
+			return errors.Wrap(err, "failed to update ring")
+		}
+	}
+
+	return nil
+}
+
 // UpdateRing updates the given ring in the database.
 func (sqlStore *SQLStore) UpdateRing(ring *model.Ring) error {
 
@@ -217,6 +241,26 @@ func (sqlStore *SQLStore) UpdateRing(ring *model.Ring) error {
 		Where("ID = ?", ring.ID),
 	); err != nil {
 		return errors.Wrap(err, "failed to update ring")
+	}
+
+	return nil
+}
+
+// UpdateRings updates the given rings in the database.
+func (sqlStore *SQLStore) UpdateRings(rings []*model.Ring) error {
+
+	tx, err := sqlStore.beginTransaction(sqlStore.db)
+	if err != nil {
+		return errors.Wrap(err, "failed to begin transaction")
+	}
+	defer tx.RollbackUnlessCommitted()
+
+	if err = sqlStore.updateRings(tx, rings); err != nil {
+		return errors.Wrap(err, "failed to update rings")
+	}
+
+	if err = tx.Commit(); err != nil {
+		return errors.Wrap(err, "failed to commit the transaction")
 	}
 
 	return nil
@@ -248,9 +292,19 @@ func (sqlStore *SQLStore) LockRing(ringID, lockerID string) (bool, error) {
 	return sqlStore.lockRows("Ring", []string{ringID}, lockerID)
 }
 
+// LockRings marks the rings as locked for exclusive use by the caller.
+func (sqlStore *SQLStore) LockRings(rings []string, lockerID string) (bool, error) {
+	return sqlStore.lockRows("Ring", rings, lockerID)
+}
+
 // UnlockRing releases a lock previously acquired against a caller.
 func (sqlStore *SQLStore) UnlockRing(ringID, lockerID string, force bool) (bool, error) {
 	return sqlStore.unlockRows("Ring", []string{ringID}, lockerID, force)
+}
+
+// UnlockRings releases a lock previously acquired against a caller.
+func (sqlStore *SQLStore) UnlockRings(rings []string, lockerID string, force bool) (bool, error) {
+	return sqlStore.unlockRows("Ring", rings, lockerID, force)
 }
 
 // LockRingAPI locks updates to the ring from the API.

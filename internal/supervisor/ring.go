@@ -27,6 +27,8 @@ type ringStore interface {
 	GetWebhooks(filter *model.WebhookFilter) ([]*model.Webhook, error)
 	GetRingsLocked() ([]*model.Ring, error)
 	GetRingsReleaseInProgress() ([]*model.Ring, error)
+	GetInstallationGroupsForRing(ringID string) ([]*model.InstallationGroup, error)
+	UpdateInstallationGroup(installationGroup *model.InstallationGroup) error
 }
 
 // ringProvisioner abstracts the provisioning operations required by the ring supervisor.
@@ -241,7 +243,30 @@ func (s *RingSupervisor) checkRingReleasePending(ring *model.Ring, logger log.Fi
 	for _, rg := range rings {
 		if rg.Priority < ring.Priority {
 			logger.Debugf("Ring %s is in priority", rg.ID)
-			return model.InstallationGroupReleasePending
+			return model.RingStateReleasePending
+		}
+	}
+
+	installationGroups, err := s.store.GetInstallationGroupsForRing(ring.ID)
+	if err != nil {
+		logger.WithError(err).Error("failed to get installation groups for ring")
+		return model.RingStateReleaseFailed
+	}
+
+	for _, ig := range installationGroups {
+		newInstallationGroupState := model.InstallationGroupReleasePending
+
+		logger.Infof("Setting Installation group %s to %s state", ig.Name, newInstallationGroupState)
+
+		if !ig.ValidInstallationGroupTransitionState(newInstallationGroupState) {
+			logger.Warnf("Unable to change installation group state change while in state %s", ig.State)
+			return model.RingStateReleaseFailed
+		}
+
+		ig.State = model.InstallationGroupReleasePending
+		if err = s.store.UpdateInstallationGroup(ig); err != nil {
+			logger.WithError(err).Error("failed to update installation group")
+			return model.RingStateReleaseFailed
 		}
 	}
 
