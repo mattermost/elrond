@@ -5,11 +5,14 @@
 package model
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/url"
 	"strconv"
 
+	dclient "github.com/docker/docker/client"
 	"github.com/pkg/errors"
 )
 
@@ -32,6 +35,19 @@ type UpdateRingRequest struct {
 	Image           string `json:"image,omitempty"`
 	Version         string `json:"version,omitempty"`
 	APISecurityLock bool   `json:"apiSecurityLock,omitempty"`
+}
+
+// ReleaseRingRequest contains metadata related to changing the installed ring state.
+type ReleaseRingRequest struct {
+	Image   string
+	Version string
+}
+
+// GetRingsRequest describes the parameters to request a list of rings.
+type GetRingsRequest struct {
+	Page           int
+	PerPage        int
+	IncludeDeleted bool
 }
 
 // SetDefaults sets the default values for a ring create request.
@@ -77,13 +93,6 @@ func NewUpdateRingRequestFromReader(reader io.Reader) (*UpdateRingRequest, error
 	return &updateRingRequest, nil
 }
 
-// GetRingsRequest describes the parameters to request a list of rings.
-type GetRingsRequest struct {
-	Page           int
-	PerPage        int
-	IncludeDeleted bool
-}
-
 // ApplyToURL modifies the given url to include query string parameters for the request.
 func (request *GetRingsRequest) ApplyToURL(u *url.URL) {
 	q := u.Query()
@@ -95,12 +104,6 @@ func (request *GetRingsRequest) ApplyToURL(u *url.URL) {
 	u.RawQuery = q.Encode()
 }
 
-// ReleaseRingRequest contains metadata related to changing the installed ring state.
-type ReleaseRingRequest struct {
-	Image   string
-	Version string
-}
-
 // NewReleaseRingRequestFromReader will create an UpdateRingRequest from an io.Reader with JSON data.
 func NewReleaseRingRequestFromReader(reader io.Reader) (*ReleaseRingRequest, error) {
 	var releaseRingRequest ReleaseRingRequest
@@ -108,5 +111,27 @@ func NewReleaseRingRequestFromReader(reader io.Reader) (*ReleaseRingRequest, err
 	if err != nil && err != io.EOF {
 		return nil, errors.Wrap(err, "failed to decode provision ring request")
 	}
+
+	err = releaseRingRequest.Validate()
+	if err != nil {
+		return nil, errors.Wrap(err, "invalid ring release request")
+	}
+
 	return &releaseRingRequest, nil
+}
+
+// Validate validates the values of a ring release request.
+func (request *ReleaseRingRequest) Validate() error {
+	ctx := context.Background()
+	cli, err := dclient.NewClientWithOpts()
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = cli.DistributionInspect(ctx, fmt.Sprintf("%s:%s", request.Image, request.Version), "")
+	if err != nil {
+		return errors.Wrapf(err, "cannot find the docker image and version specified. Please check they exist.")
+	}
+
+	return nil
 }
