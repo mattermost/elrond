@@ -46,6 +46,31 @@ func lockRing(c *Context, ringID string) (*model.Ring, int, func()) {
 	}
 }
 
+// lockRings locks all rings at the same time.
+func lockRings(c *Context, rings []string) (int, func()) {
+	locked, err := c.Store.LockRings(rings, c.RequestID)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to lock rings")
+		return http.StatusInternalServerError, nil
+	} else if !locked {
+		c.Logger.Error("failed to acquire lock for rings")
+		return http.StatusConflict, nil
+	}
+
+	unlockOnce := sync.Once{}
+
+	return 0, func() {
+		unlockOnce.Do(func() {
+			unlocked, err := c.Store.UnlockRings(rings, c.RequestID, false)
+			if err != nil {
+				c.Logger.WithError(err).Errorf("failed to unlock rings")
+			} else if !unlocked {
+				c.Logger.Error("failed to release lock for rings")
+			}
+		})
+	}
+}
+
 // lockRingInstallationGroup synchronizes access to the given ring installation group across potentially
 // multiple elrond servers.
 func lockRingInstallationGroup(c *Context, installationGroupID string) (*model.InstallationGroup, int, func()) {

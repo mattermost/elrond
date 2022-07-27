@@ -41,9 +41,8 @@ func (provisioner *ElProvisioner) ReleaseInstallationGroup(installationGroup *mo
 			return errors.Wrap(err, "failed to patch provisioner group")
 		}
 
-		wait := 1000
-		logger.Infof("Update provisioner group %s successful. Waiting up to %d seconds for the group release to complete...", installationGroup.ProvisionerGroupID, wait)
-		err = waitForGroupRelease(client, wait, installationGroup.ProvisionerGroupID)
+		logger.Infof("Update provisioner group %s successful. Waiting up to %d seconds for the group release to complete...", installationGroup.ProvisionerGroupID, provisioner.params.ProvisionerGroupReleaseTimeout)
+		err = waitForGroupRelease(client, provisioner.params.ProvisionerGroupReleaseTimeout, installationGroup.ProvisionerGroupID)
 		if err != nil {
 			return err
 		}

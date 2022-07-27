@@ -23,6 +23,7 @@ func initRing(apiRouter *mux.Router, context *Context) {
 	ringsRouter := apiRouter.PathPrefix("/rings").Subrouter()
 	ringsRouter.Handle("", addContext(handleGetRings)).Methods("GET")
 	ringsRouter.Handle("", addContext(handleCreateRing)).Methods("POST")
+	ringsRouter.Handle("/release", addContext(handleReleaseAllRings)).Methods("POST")
 
 	ringRouter := apiRouter.PathPrefix("/ring/{ring:[A-Za-z0-9]{26}}").Subrouter()
 	ringRouter.Handle("", addContext(handleGetRing)).Methods("GET")
@@ -248,8 +249,6 @@ func handleUpdateRing(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	c.Logger.Info(updateRingRequest)
-
 	if updateRingRequest.Name != "" {
 		ring.Name = updateRingRequest.Name
 	}
@@ -281,6 +280,97 @@ func handleUpdateRing(c *Context, w http.ResponseWriter, r *http.Request) {
 	outputJSON(c, w, ring)
 }
 
+// handleReleaseAllRings responds to POST /api/rings/release,
+// releasing a deployment in all rings.
+func handleReleaseAllRings(c *Context, w http.ResponseWriter, r *http.Request) {
+	releaseRingRequest, err := model.NewReleaseRingRequestFromReader(r.Body)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to deserialize ring release request body")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	rings, err := c.Store.GetRings(&model.RingFilter{
+		IncludeDeleted: false,
+		PerPage:        10000,
+	})
+
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to get all rings from store")
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+
+	var ringIDs []string
+	for _, ring := range rings {
+		ringIDs = append(ringIDs, ring.ID)
+	}
+
+	status, unlockOnce := lockRings(c, ringIDs)
+	if status != 0 {
+		w.WriteHeader(status)
+		return
+	}
+	defer unlockOnce()
+
+	var webhookPayloads []*model.WebhookPayload
+
+	c.Logger.Debug("Checking if all rings can be released")
+	for _, ring := range rings {
+		c.Logger = c.Logger.WithField("ring", ring.ID)
+
+		if ring.APISecurityLock {
+			logSecurityLockConflict("ring", c.Logger)
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
+
+		if !ring.ValidTransitionState(model.RingStateReleasePending) {
+			c.Logger.Warnf("unable to do a ring release while in state %s", ring.State)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		if ring.State != model.RingStateReleasePending {
+			webhookPayload := &model.WebhookPayload{
+				Type:      model.TypeRing,
+				ID:        ring.ID,
+				NewState:  model.RingStateReleasePending,
+				OldState:  ring.State,
+				Timestamp: time.Now().UnixNano(),
+				ExtraData: map[string]string{"Environment": c.Environment},
+			}
+
+			if ring.Image != releaseRingRequest.Image || ring.Version != releaseRingRequest.Version {
+
+				ring.State = model.RingStateReleasePending
+				ring.Image = releaseRingRequest.Image
+				ring.Version = releaseRingRequest.Version
+
+				webhookPayloads = append(webhookPayloads, webhookPayload)
+			}
+		}
+	}
+
+	c.Logger.Debug("Updating all rings in a single transaction")
+	if err = c.Store.UpdateRings(rings); err != nil {
+		c.Logger.WithError(err).Error("failed to update rings in a single transaction")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	for _, payload := range webhookPayloads {
+		if err := webhook.SendToAllWebhooks(c.Store, payload, c.Logger.WithField("webhookEvent", payload.NewState)); err != nil {
+			c.Logger.WithError(err).Error("unable to process and send webhooks")
+		}
+
+		c.Logger.Infof("Ring %s updated", payload.ID)
+	}
+
+	c.Supervisor.Do() //nolint
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusAccepted)
+	outputJSON(c, w, rings)
+}
+
 // handleReleaseRing responds to POST /api/ring/{ring}/release,
 // releasing a deployment in a ring.
 func handleReleaseRing(c *Context, w http.ResponseWriter, r *http.Request) {
@@ -308,7 +398,7 @@ func handleReleaseRing(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newState := model.RingStateReleaseRequested
+	newState := model.RingStateReleasePending
 
 	if !ring.ValidTransitionState(newState) {
 		c.Logger.Warnf("unable to do a ring release while in state %s", ring.State)
@@ -332,39 +422,10 @@ func handleReleaseRing(c *Context, w http.ResponseWriter, r *http.Request) {
 			ring.Image = releaseRingRequest.Image
 			ring.Version = releaseRingRequest.Version
 
-			c.Logger.Info(releaseRingRequest)
-
 			if err = c.Store.UpdateRing(ring); err != nil {
 				c.Logger.WithError(err).Error("failed to update ring")
 				w.WriteHeader(http.StatusInternalServerError)
 				return
-			}
-			installationGroups, err := c.Store.GetInstallationGroupsForRing(ringID)
-			if err != nil {
-				c.Logger.WithError(err).Error("failed to get installation groups for ring")
-				w.WriteHeader(http.StatusInternalServerError)
-				return
-			}
-
-			ring.InstallationGroups = installationGroups
-
-			for _, ig := range ring.InstallationGroups {
-				newInstallationGroupState := model.InstallationGroupReleasePending
-
-				c.Logger.Infof("Setting Installation group %s to %s state", ig.Name, newInstallationGroupState)
-
-				if !ig.ValidInstallationGroupTransitionState(newInstallationGroupState) {
-					c.Logger.Warnf("Unable to change installation group state change while in state %s", ig.State)
-					w.WriteHeader(http.StatusBadRequest)
-					return
-				}
-
-				ig.State = model.InstallationGroupReleasePending
-				if err = c.Store.UpdateInstallationGroup(ig); err != nil {
-					c.Logger.WithError(err).Error("failed to update installation group")
-					w.WriteHeader(http.StatusInternalServerError)
-					return
-				}
 			}
 
 			if err := webhook.SendToAllWebhooks(c.Store, webhookPayload, c.Logger.WithField("webhookEvent", webhookPayload.NewState)); err != nil {
@@ -396,7 +457,7 @@ func handleRetryReleaseRing(c *Context, w http.ResponseWriter, r *http.Request) 
 	}
 	defer unlockOnce()
 
-	newState := model.RingStateReleaseRequested
+	newState := model.RingStateReleasePending
 
 	if !ring.ValidTransitionState(newState) {
 		c.Logger.Warnf("unable to retry ring release while in state %s", ring.State)

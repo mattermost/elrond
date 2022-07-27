@@ -163,6 +163,23 @@ func (c *Client) ReleaseRing(ringID string, request *ReleaseRingRequest) (*Ring,
 	}
 }
 
+// ReleaseAllRings releases all ring deployments form the configured elrond server.
+func (c *Client) ReleaseAllRings(request *ReleaseRingRequest) ([]*Ring, error) {
+	resp, err := c.doPost(c.buildURL("/api/rings/release"), request)
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusAccepted:
+		return RingsFromReader(resp.Body)
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
 // GetRing fetches the specified ring from the configured elrond server.
 func (c *Client) GetRing(ringID string) (*Ring, error) {
 	resp, err := c.doGet(c.buildURL("/api/ring/%s", ringID))

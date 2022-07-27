@@ -44,8 +44,6 @@ func handleUpdateInstallationGroup(c *Context, w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	c.Logger.Info(updateInstallationGroupRequest)
-
 	if updateInstallationGroupRequest.Name != "" {
 		installationGroup.Name = updateInstallationGroupRequest.Name
 	}

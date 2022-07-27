@@ -20,8 +20,11 @@ type Store interface {
 	GetRing(ringID string) (*model.Ring, error)
 	GetRings(filter *model.RingFilter) ([]*model.Ring, error)
 	UpdateRing(ring *model.Ring) error
+	UpdateRings(rings []*model.Ring) error
 	LockRing(ringID, lockerID string) (bool, error)
+	LockRings(rings []string, lockerID string) (bool, error)
 	UnlockRing(ringID, lockerID string, force bool) (bool, error)
+	UnlockRings(rings []string, lockerID string, force bool) (bool, error)
 	LockRingAPI(ringID string) error
 	UnlockRingAPI(ringID string) error
 	DeleteRing(ringID string) error

@@ -8,17 +8,24 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// ProvisioningParams represent configuration used during various provisioning operations.
+type ProvisioningParams struct {
+	ProvisionerGroupReleaseTimeout int
+}
+
 // ElProvisioner provisions release rings.
 type ElProvisioner struct {
+	params            ProvisioningParams
 	logger            log.FieldLogger
 	ProvisionerServer string
 }
 
 // NewElrondProvisioner creates a new ElrondProvisioner.
-func NewElrondProvisioner(logger log.FieldLogger, provisionerServer string) *ElProvisioner {
+func NewElrondProvisioner(provisioningParams ProvisioningParams, logger log.FieldLogger, provisionerServer string) *ElProvisioner {
 	logger = logger.WithField("provisioner", "elrond")
 
 	return &ElProvisioner{
+		params:            provisioningParams,
 		logger:            logger,
 		ProvisionerServer: provisionerServer,
 	}

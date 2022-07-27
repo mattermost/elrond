@@ -153,6 +153,21 @@ func (s *InstallationGroupSupervisor) transitionInstallationGroup(installationGr
 }
 
 func (s *InstallationGroupSupervisor) checkInstallationGroupPending(installationGroup *model.InstallationGroup, logger log.FieldLogger) string {
+	logger.Debugf("Checking if installation group %s ring is in state to move forward with installation group releases...", installationGroup.ID)
+	ring, err := s.store.GetRingFromInstallationGroupID(installationGroup.ID)
+	if err != nil {
+		logger.WithError(err).Error("Failed to query for the ring of the installation group")
+		return model.InstallationGroupReleaseFailed
+	}
+
+	if ring.State == model.RingStateReleaseFailed {
+		return model.InstallationGroupReleaseFailed
+	}
+
+	if ring.State != model.RingStateReleaseRequested && ring.State != model.RingStateReleaseInProgress {
+		return model.InstallationGroupReleasePending
+	}
+
 	logger.Debug("Checking if other Installation Groups are locked...")
 
 	installationGroupsLocked, err := s.store.GetInstallationGroupsLocked()

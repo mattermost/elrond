@@ -11,6 +11,8 @@ const (
 	RingStateCreationRequested = "creation-requested"
 	// RingStateCreationFailed is a ring that failed creation.
 	RingStateCreationFailed = "creation-failed"
+	// RingStateReleasePending is a ring pending a release.
+	RingStateReleasePending = "release-pending"
 	// RingStateReleaseRequested is a ring in the process of a release.
 	RingStateReleaseRequested = "release-requested"
 	// RingStateReleaseFailed is a ring that failed the release.
@@ -42,6 +44,7 @@ var AllRingStates = []string{
 	RingStateStable,
 	RingStateCreationRequested,
 	RingStateCreationFailed,
+	RingStateReleasePending,
 	RingStateReleaseRequested,
 	RingStateReleaseFailed,
 	RingStateReleaseInProgress,
@@ -62,11 +65,20 @@ var AllRingStates = []string{
 // supervisor should perform some action on its next work cycle.
 var AllRingStatesPendingWork = []string{
 	RingStateCreationRequested,
+	RingStateReleasePending,
 	RingStateReleaseRequested,
 	RingStateReleaseInProgress,
 	RingStateSoakingRequested,
 	RingStateReleaseRollbackRequested,
 	RingStateDeletionRequested,
+}
+
+// AllRingStatesReleaseInProgress is a list of all ring states that are part of a release in progress.
+var AllRingStatesReleaseInProgress = []string{
+	RingStateReleaseRequested,
+	RingStateReleaseInProgress,
+	RingStateSoakingRequested,
+	RingStateReleaseRollbackRequested,
 }
 
 // AllRingRequestStates is a list of all states that a ring can be put in
@@ -88,6 +100,8 @@ func (c *Ring) ValidTransitionState(newState string) bool {
 	switch newState {
 	case RingStateCreationRequested:
 		return validTransitionToRingStateCreationRequested(c.State)
+	case RingStateReleasePending:
+		return validTransitionToRingStateReleasePending(c.State)
 	case RingStateReleaseRequested:
 		return validTransitionToRingStateReleaseRequested(c.State)
 	case RingStateReleaseInProgress:
@@ -113,9 +127,20 @@ func validTransitionToRingStateCreationRequested(currentState string) bool {
 	return false
 }
 
-func validTransitionToRingStateReleaseRequested(currentState string) bool {
+func validTransitionToRingStateReleasePending(currentState string) bool {
 	switch currentState {
 	case RingStateStable,
+		RingStateReleasePending,
+		RingStateReleaseFailed:
+		return true
+	}
+
+	return false
+}
+
+func validTransitionToRingStateReleaseRequested(currentState string) bool {
+	switch currentState {
+	case RingStateReleasePending,
 		RingStateReleaseRequested,
 		RingStateReleaseFailed:
 		return true

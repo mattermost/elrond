@@ -35,6 +35,14 @@ func (s *mockRingStore) GetRings(RingFilter *model.RingFilter) ([]*model.Ring, e
 	return s.Rings, nil
 }
 
+func (s *mockRingStore) GetRingsLocked() ([]*model.Ring, error) {
+	return s.Rings, nil
+}
+
+func (s *mockRingStore) GetRingsReleaseInProgress() ([]*model.Ring, error) {
+	return s.Rings, nil
+}
+
 func (s *mockRingStore) UpdateRing(Ring *model.Ring) error {
 	s.UpdateRingCalls++
 	return nil
@@ -65,6 +73,14 @@ func (s *mockRingStore) GetWebhooks(filter *model.WebhookFilter) ([]*model.Webho
 
 func (s *mockRingStore) GetRingInstallationGroupsPendingWork(ringID string) ([]*model.InstallationGroup, error) {
 	return nil, nil
+}
+
+func (s *mockRingStore) GetInstallationGroupsForRing(ringID string) ([]*model.InstallationGroup, error) {
+	return nil, nil
+}
+
+func (s *mockRingStore) UpdateInstallationGroup(installationGroup *model.InstallationGroup) error {
+	return nil
 }
 
 type mockRingProvisioner struct{}
@@ -133,6 +149,7 @@ func TestRingSupervisorSupervise(t *testing.T) {
 	}{
 		{"unexpected state", model.RingStateStable, model.RingStateStable},
 		{"creation requested", model.RingStateCreationRequested, model.RingStateStable},
+		{"release pending", model.RingStateReleasePending, model.RingStateReleaseRequested},
 		{"release requested", model.RingStateReleaseRequested, model.RingStateSoakingRequested},
 		{"soaking requested", model.RingStateSoakingRequested, model.RingStateStable},
 		{"rollback requested", model.RingStateReleaseRollbackRequested, model.RingStateReleaseRollbackComplete},
@@ -148,7 +165,10 @@ func TestRingSupervisorSupervise(t *testing.T) {
 				State: tc.InitialState,
 			}
 
-			installationGroup := model.InstallationGroup{Name: "group1"}
+			installationGroup := model.InstallationGroup{
+				Name:  "group1",
+				State: model.InstallationGroupStable,
+			}
 
 			err := sqlStore.CreateRing(Ring, &installationGroup)
 			require.NoError(t, err)

@@ -167,7 +167,7 @@ func TestGetUnlockedRingsPendingWork(t *testing.T) {
 	time.Sleep(1 * time.Millisecond)
 
 	releaseRequestedRing := &model.Ring{
-		State: model.RingStateReleaseRequested,
+		State: model.RingStateReleasePending,
 	}
 	err = sqlStore.CreateRing(releaseRequestedRing, nil)
 	require.NoError(t, err)
