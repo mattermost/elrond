@@ -131,6 +131,7 @@ func handleCreateRing(c *Context, w http.ResponseWriter, r *http.Request) {
 		Provisioner:     "elrond",
 		APISecurityLock: createRingRequest.APISecurityLock,
 		State:           model.RingStateCreationRequested,
+		ChangeRequest:   &model.ChangeRequest{},
 	}
 	iGroup := model.InstallationGroup{}
 	if createRingRequest.InstallationGroup != nil {
@@ -342,8 +343,10 @@ func handleReleaseAllRings(c *Context, w http.ResponseWriter, r *http.Request) {
 			if ring.Image != releaseRingRequest.Image || ring.Version != releaseRingRequest.Version {
 
 				ring.State = model.RingStateReleasePending
-				ring.Image = releaseRingRequest.Image
-				ring.Version = releaseRingRequest.Version
+				ring.ChangeRequest.Image = releaseRingRequest.Image
+				ring.ChangeRequest.Version = releaseRingRequest.Version
+				ring.ChangeRequest.ReleaseStart = time.Now().UnixNano()
+				ring.ChangeRequest.Hotfix = releaseRingRequest.Hotfix
 
 				webhookPayloads = append(webhookPayloads, webhookPayload)
 			}
@@ -398,19 +401,17 @@ func handleReleaseRing(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newState := model.RingStateReleasePending
-
-	if !ring.ValidTransitionState(newState) {
+	if !ring.ValidTransitionState(model.RingStateReleasePending) {
 		c.Logger.Warnf("unable to do a ring release while in state %s", ring.State)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	if ring.State != newState {
+	if ring.State != model.RingStateReleasePending {
 		webhookPayload := &model.WebhookPayload{
 			Type:      model.TypeRing,
 			ID:        ring.ID,
-			NewState:  newState,
+			NewState:  model.RingStateReleasePending,
 			OldState:  ring.State,
 			Timestamp: time.Now().UnixNano(),
 			ExtraData: map[string]string{"Environment": c.Environment},
@@ -418,9 +419,11 @@ func handleReleaseRing(c *Context, w http.ResponseWriter, r *http.Request) {
 
 		if ring.Image != releaseRingRequest.Image || ring.Version != releaseRingRequest.Version {
 
-			ring.State = newState
-			ring.Image = releaseRingRequest.Image
-			ring.Version = releaseRingRequest.Version
+			ring.State = model.RingStateReleasePending
+			ring.ChangeRequest.Image = releaseRingRequest.Image
+			ring.ChangeRequest.Version = releaseRingRequest.Version
+			ring.ChangeRequest.ReleaseStart = time.Now().UnixNano()
+			ring.ChangeRequest.Hotfix = releaseRingRequest.Hotfix
 
 			if err = c.Store.UpdateRing(ring); err != nil {
 				c.Logger.WithError(err).Error("failed to update ring")

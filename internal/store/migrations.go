@@ -42,6 +42,7 @@ var migrations = []migration{
 				SoakTime INT NOT NULL,
 				Image TEXT NOT NULL,
 				Version TEXT NOT NULL,
+				ChangeRequestMetadataRaw BYTEA NULL,
 				ReleaseAt BIGINT NOT NULL,
 				CreateAt BIGINT NOT NULL,
 				DeleteAt BIGINT NOT NULL,

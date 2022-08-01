@@ -204,6 +204,10 @@ func (s *InstallationGroupSupervisor) releaseInstallationGroup(installationGroup
 		return model.InstallationGroupReleaseFailed
 	}
 	logger.Infof("Finished releasing installation group %s", installationGroup.ID)
+	if ring.ChangeRequest.Hotfix {
+		logger.Info("This is an urgent hotfix. Skipping installation group soaking time...")
+		return model.InstallationGroupStable
+	}
 	return model.InstallationGroupReleaseSoakingRequested
 }
 

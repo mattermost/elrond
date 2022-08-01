@@ -22,16 +22,16 @@ func (provisioner *ElProvisioner) ReleaseInstallationGroup(installationGroup *mo
 	logger.Info("Getting provisioner installation groups")
 
 	group, err := client.GetGroup(installationGroup.ProvisionerGroupID)
-	if err != nil {
-		return errors.Wrapf(err, "failed to get group %s", installationGroup.ProvisionerGroupID)
+	if group == nil || err != nil {
+		return errors.Wrapf(err, "failed to get group %s, make sure it exists", installationGroup.ProvisionerGroupID)
 	}
 
-	if group.Image != ring.Image || group.Version != ring.Version {
-		logger.Infof("Current provisioner group image is %s:%s and should be updated to %s:%s", group.Image, group.Version, ring.Image, ring.Version)
+	if group.Image != ring.ChangeRequest.Image || group.Version != ring.ChangeRequest.Version {
+		logger.Infof("Current provisioner group image is %s:%s and should be updated to %s:%s", group.Image, group.Version, &ring.ChangeRequest.Image, &ring.ChangeRequest.Version)
 		request := &cmodel.PatchGroupRequest{
 			ID:      installationGroup.ProvisionerGroupID,
-			Version: &ring.Version,
-			Image:   &ring.Image,
+			Version: &ring.ChangeRequest.Version,
+			Image:   &ring.ChangeRequest.Image,
 		}
 
 		logger.Infof("Updating provisioner group %s", installationGroup.ProvisionerGroupID)

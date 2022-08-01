@@ -6,6 +6,7 @@ package store
 
 import (
 	"database/sql"
+	"encoding/json"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/mattermost/elrond/model"
@@ -16,17 +17,40 @@ var ringSelect sq.SelectBuilder
 
 func init() {
 	ringSelect = sq.
-		Select("Ring.ID", "Name", "Priority", "SoakTime", "Image", "Version", "Provisioner", "State", "CreateAt", "DeleteAt", "ReleaseAt", "APISecurityLock", "LockAcquiredBy", "LockAcquiredAt").
+		Select("Ring.ID", "Name", "Priority", "SoakTime", "Image", "Version", "Provisioner", "ChangeRequestMetadataRaw", "State", "CreateAt", "DeleteAt", "ReleaseAt", "APISecurityLock", "LockAcquiredBy", "LockAcquiredAt").
 		From("Ring")
 }
 
 type rawRing struct {
 	*model.Ring
+	*RawRingMetadata
+}
+
+// RawRingMetadata is the raw byte metadata for a ring.
+type RawRingMetadata struct {
+	ChangeRequestMetadataRaw []byte
 }
 
 type rawRings []*rawRing
 
+func buildRawMetadata(ring *model.Ring) (*RawRingMetadata, error) {
+	changeRequestMetadataJSON, err := json.Marshal(ring.ChangeRequest)
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to marshal ChangeRequestMetadata")
+	}
+
+	return &RawRingMetadata{
+		ChangeRequestMetadataRaw: changeRequestMetadataJSON,
+	}, nil
+}
+
 func (r *rawRing) toRing() (*model.Ring, error) {
+	var err error
+	r.Ring.ChangeRequest, err = model.NewChangeRequestMetadata(r.ChangeRequestMetadataRaw)
+	if err != nil {
+		return nil, err
+	}
+
 	return r.Ring, nil
 }
 
@@ -105,22 +129,22 @@ func (sqlStore *SQLStore) GetUnlockedRingsPendingWork() ([]*model.Ring, error) {
 
 // GetRingsLocked returns all rings that are under lock.
 func (sqlStore *SQLStore) GetRingsLocked() ([]*model.Ring, error) {
-	var rings []*model.Ring
+	var rawRings rawRings
 
 	builder := ringSelect.
 		Where("LockAcquiredAt > 0")
 
-	err := sqlStore.selectBuilder(sqlStore.db, &rings, builder)
+	err := sqlStore.selectBuilder(sqlStore.db, &rawRings, builder)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to query for locked rings")
 	}
 
-	return rings, nil
+	return rawRings.toRings()
 }
 
 // GetRingsReleaseInProgress returns all rings in a releasing state.
 func (sqlStore *SQLStore) GetRingsReleaseInProgress() ([]*model.Ring, error) {
-	var rings []*model.Ring
+	var rawRings rawRings
 
 	builder := ringSelect.
 		Where(sq.Eq{
@@ -128,12 +152,12 @@ func (sqlStore *SQLStore) GetRingsReleaseInProgress() ([]*model.Ring, error) {
 		}).
 		Where("LockAcquiredAt = 0")
 
-	err := sqlStore.selectBuilder(sqlStore.db, &rings, builder)
+	err := sqlStore.selectBuilder(sqlStore.db, &rawRings, builder)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to query for rings")
 	}
 
-	return rings, nil
+	return rawRings.toRings()
 }
 
 // CreateRing records the given ring to the database, assigning it a unique ID.
@@ -169,28 +193,43 @@ func (sqlStore *SQLStore) CreateRing(ring *model.Ring, installationGroup *model.
 	return nil
 }
 
+func buildRawChangeRequest(ring *model.Ring) ([]byte, error) {
+	changeRequestJSON, err := json.Marshal(ring.ChangeRequest)
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to marshal ChangeRequest")
+	}
+
+	return changeRequestJSON, nil
+}
+
 // createRing records the given ring to the database, assigning it a unique ID.
 func (sqlStore *SQLStore) createRing(execer execer, ring *model.Ring) error {
 	ring.ID = model.NewID()
 	ring.CreateAt = GetMillis()
 
+	rawMetadata, err := buildRawMetadata(ring)
+	if err != nil {
+		return errors.Wrap(err, "unable to build raw ring metadata")
+	}
+
 	if _, err := sqlStore.execBuilder(execer, sq.
 		Insert("Ring").
 		SetMap(map[string]interface{}{
-			"ID":              ring.ID,
-			"Name":            ring.Name,
-			"Priority":        ring.Priority,
-			"State":           ring.State,
-			"SoakTime":        ring.SoakTime,
-			"Image":           ring.Image,
-			"Version":         ring.Version,
-			"Provisioner":     ring.Provisioner,
-			"CreateAt":        ring.CreateAt,
-			"ReleaseAt":       ring.ReleaseAt,
-			"DeleteAt":        ring.DeleteAt,
-			"APISecurityLock": ring.APISecurityLock,
-			"LockAcquiredBy":  nil,
-			"LockAcquiredAt":  0,
+			"ID":                       ring.ID,
+			"Name":                     ring.Name,
+			"Priority":                 ring.Priority,
+			"State":                    ring.State,
+			"SoakTime":                 ring.SoakTime,
+			"Image":                    ring.Image,
+			"Version":                  ring.Version,
+			"Provisioner":              ring.Provisioner,
+			"CreateAt":                 ring.CreateAt,
+			"ReleaseAt":                ring.ReleaseAt,
+			"DeleteAt":                 ring.DeleteAt,
+			"APISecurityLock":          ring.APISecurityLock,
+			"LockAcquiredBy":           nil,
+			"LockAcquiredAt":           0,
+			"ChangeRequestMetadataRaw": rawMetadata.ChangeRequestMetadataRaw,
 		}),
 	); err != nil {
 		return errors.Wrap(err, "failed to create ring")
@@ -202,17 +241,22 @@ func (sqlStore *SQLStore) createRing(execer execer, ring *model.Ring) error {
 // updateRings updates the given rings to the database when a single transaction is needed.
 func (sqlStore *SQLStore) updateRings(execer execer, rings []*model.Ring) error {
 	for _, ring := range rings {
+		rawMetadata, err := buildRawMetadata(ring)
+		if err != nil {
+			return errors.Wrap(err, "unable to build raw ring metadata")
+		}
 		if _, err := sqlStore.execBuilder(execer, sq.
 			Update("Ring").
 			SetMap(map[string]interface{}{
-				"Name":        ring.Name,
-				"Priority":    ring.Priority,
-				"State":       ring.State,
-				"SoakTime":    ring.SoakTime,
-				"Provisioner": ring.Provisioner,
-				"Image":       ring.Image,
-				"Version":     ring.Version,
-				"ReleaseAt":   ring.ReleaseAt,
+				"Name":                     ring.Name,
+				"Priority":                 ring.Priority,
+				"State":                    ring.State,
+				"SoakTime":                 ring.SoakTime,
+				"Provisioner":              ring.Provisioner,
+				"Image":                    ring.Image,
+				"Version":                  ring.Version,
+				"ReleaseAt":                ring.ReleaseAt,
+				"ChangeRequestMetadataRaw": rawMetadata.ChangeRequestMetadataRaw,
 			}).
 			Where("ID = ?", ring.ID),
 		); err != nil {
@@ -225,18 +269,22 @@ func (sqlStore *SQLStore) updateRings(execer execer, rings []*model.Ring) error 
 
 // UpdateRing updates the given ring in the database.
 func (sqlStore *SQLStore) UpdateRing(ring *model.Ring) error {
-
+	rawMetadata, err := buildRawMetadata(ring)
+	if err != nil {
+		return errors.Wrap(err, "unable to build raw ring metadata")
+	}
 	if _, err := sqlStore.execBuilder(sqlStore.db, sq.
 		Update("Ring").
 		SetMap(map[string]interface{}{
-			"Name":        ring.Name,
-			"Priority":    ring.Priority,
-			"State":       ring.State,
-			"SoakTime":    ring.SoakTime,
-			"Provisioner": ring.Provisioner,
-			"Image":       ring.Image,
-			"Version":     ring.Version,
-			"ReleaseAt":   ring.ReleaseAt,
+			"Name":                     ring.Name,
+			"Priority":                 ring.Priority,
+			"State":                    ring.State,
+			"SoakTime":                 ring.SoakTime,
+			"Provisioner":              ring.Provisioner,
+			"Image":                    ring.Image,
+			"Version":                  ring.Version,
+			"ReleaseAt":                ring.ReleaseAt,
+			"ChangeRequestMetadataRaw": rawMetadata.ChangeRequestMetadataRaw,
 		}).
 		Where("ID = ?", ring.ID),
 	); err != nil {

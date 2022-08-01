@@ -288,6 +288,20 @@ func (s *RingSupervisor) checkReleaseProgress(ring *model.Ring, logger log.Field
 	}
 
 	logger.Infof("Finished releasing ring %s", ring.ID)
+	if ring.ChangeRequest.Hotfix {
+		logger.Info("This is an urgent hotfix. Skipping ring soaking time...")
+		logger.Infof("Ring %s release is now complete. Updating current image and version and setting ring to stable.", ring.ID)
+
+		ring.Image = ring.ChangeRequest.Image
+		ring.Version = ring.ChangeRequest.Version
+		ring.ChangeRequest = &model.ChangeRequest{}
+
+		if err = s.store.UpdateRing(ring); err != nil {
+			logger.WithError(err).Error("Failed to record updated ring version and image")
+			return model.RingStateReleaseFailed
+		}
+		return model.RingStateStable
+	}
 	return model.RingStateSoakingRequested
 }
 
@@ -306,7 +320,16 @@ func (s *RingSupervisor) soakRing(ring *model.Ring, logger log.FieldLogger) stri
 	}
 
 	logger.Infof("Finished soaking ring %s", ring.ID)
-	logger.Infof("Ring %s release is now complete. Setting ring to stable.", ring.ID)
+	logger.Infof("Ring %s release is now complete. Updating current image and version and setting ring to stable.", ring.ID)
+
+	ring.Image = ring.ChangeRequest.Image
+	ring.Version = ring.ChangeRequest.Version
+	ring.ChangeRequest = &model.ChangeRequest{}
+
+	if err = s.store.UpdateRing(ring); err != nil {
+		logger.WithError(err).Error("Failed to record updated ring version and image")
+		return model.RingStateSoakingFailed
+	}
 	return model.RingStateStable
 }
 

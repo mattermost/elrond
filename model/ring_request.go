@@ -41,6 +41,7 @@ type UpdateRingRequest struct {
 type ReleaseRingRequest struct {
 	Image   string
 	Version string
+	Hotfix  bool
 }
 
 // GetRingsRequest describes the parameters to request a list of rings.
@@ -125,7 +126,7 @@ func (request *ReleaseRingRequest) Validate() error {
 	ctx := context.Background()
 	cli, err := dclient.NewClientWithOpts()
 	if err != nil {
-		panic(err)
+		return errors.Wrapf(err, "cannot obtain client to check docker image.")
 	}
 
 	_, err = cli.DistributionInspect(ctx, fmt.Sprintf("%s:%s", request.Image, request.Version), "")

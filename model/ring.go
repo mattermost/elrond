@@ -19,10 +19,11 @@ type Ring struct {
 	Version            string
 	State              string
 	Provisioner        string
+	ChangeRequest      *ChangeRequest
 	CreateAt           int64
 	DeleteAt           int64
 	ReleaseAt          int64
-	InstallationGroups []*InstallationGroup `json:"InstallationGroups,omitempty"`
+	InstallationGroups []*InstallationGroup `json:"installationGroups,omitempty"`
 	APISecurityLock    bool
 	LockAcquiredBy     *string
 	LockAcquiredAt     int64
