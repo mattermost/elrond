@@ -27,7 +27,7 @@ func (provisioner *ElProvisioner) ReleaseInstallationGroup(installationGroup *mo
 	}
 
 	if group.Image != ring.ChangeRequest.Image || group.Version != ring.ChangeRequest.Version {
-		logger.Infof("Current provisioner group image is %s:%s and should be updated to %s:%s", group.Image, group.Version, &ring.ChangeRequest.Image, &ring.ChangeRequest.Version)
+		logger.Infof("Current provisioner group image is %s:%s and should be updated to %s:%s", group.Image, group.Version, ring.ChangeRequest.Image, ring.ChangeRequest.Version)
 		request := &cmodel.PatchGroupRequest{
 			ID:      installationGroup.ProvisionerGroupID,
 			Version: &ring.ChangeRequest.Version,
