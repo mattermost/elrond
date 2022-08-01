@@ -162,7 +162,10 @@ func TestRingSupervisorSupervise(t *testing.T) {
 			supervisor := supervisor.NewRingSupervisor(sqlStore, &mockRingProvisioner{}, "instanceID", logger)
 
 			Ring := &model.Ring{
-				State: tc.InitialState,
+				State:         tc.InitialState,
+				Image:         "test-image",
+				Version:       "test-version",
+				ChangeRequest: &model.ChangeRequest{},
 			}
 
 			installationGroup := model.InstallationGroup{
