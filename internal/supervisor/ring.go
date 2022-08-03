@@ -288,8 +288,8 @@ func (s *RingSupervisor) checkReleaseProgress(ring *model.Ring, logger log.Field
 	}
 
 	logger.Infof("Finished releasing ring %s", ring.ID)
-	if ring.ChangeRequest.Hotfix {
-		logger.Info("This is an urgent hotfix. Skipping ring soaking time...")
+	if ring.ChangeRequest.Force {
+		logger.Info("This is a forced release. Skipping ring soaking time...")
 		logger.Infof("Ring %s release is now complete. Updating current image and version and setting ring to stable.", ring.ID)
 
 		ring.Image = ring.ChangeRequest.Image

@@ -346,7 +346,7 @@ func handleReleaseAllRings(c *Context, w http.ResponseWriter, r *http.Request) {
 				ring.ChangeRequest.Image = releaseRingRequest.Image
 				ring.ChangeRequest.Version = releaseRingRequest.Version
 				ring.ChangeRequest.ReleaseStart = time.Now().UnixNano()
-				ring.ChangeRequest.Hotfix = releaseRingRequest.Hotfix
+				ring.ChangeRequest.Force = releaseRingRequest.Force
 
 				webhookPayloads = append(webhookPayloads, webhookPayload)
 			}
@@ -423,7 +423,7 @@ func handleReleaseRing(c *Context, w http.ResponseWriter, r *http.Request) {
 			ring.ChangeRequest.Image = releaseRingRequest.Image
 			ring.ChangeRequest.Version = releaseRingRequest.Version
 			ring.ChangeRequest.ReleaseStart = time.Now().UnixNano()
-			ring.ChangeRequest.Hotfix = releaseRingRequest.Hotfix
+			ring.ChangeRequest.Force = releaseRingRequest.Force
 
 			if err = c.Store.UpdateRing(ring); err != nil {
 				c.Logger.WithError(err).Error("failed to update ring")

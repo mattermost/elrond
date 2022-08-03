@@ -12,7 +12,7 @@ import (
 type ChangeRequest struct {
 	Image        string
 	Version      string
-	Hotfix       bool
+	Force        bool
 	ReleaseStart int64
 }
 

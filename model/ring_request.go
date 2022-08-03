@@ -41,7 +41,7 @@ type UpdateRingRequest struct {
 type ReleaseRingRequest struct {
 	Image   string
 	Version string
-	Hotfix  bool
+	Force   bool
 }
 
 // GetRingsRequest describes the parameters to request a list of rings.

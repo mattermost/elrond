@@ -47,7 +47,7 @@ func init() {
 	ringReleaseCmd.Flags().String("ring", "", "The id of the ring to be released.")
 	ringReleaseCmd.Flags().String("image", "", "The Mattermost image to release to.")
 	ringReleaseCmd.Flags().String("version", "", "The Mattermost version to release to.")
-	ringReleaseCmd.Flags().Bool("hotfix", false, "When set to true an urgent hotfix release will be pushed in all rings.")
+	ringReleaseCmd.Flags().Bool("force", false, "When set to true a release is forced and soaking times are ignored.")
 	ringReleaseCmd.Flags().Bool("all-rings", false, "Whether all rings should be released.")
 
 	ringDeleteCmd.Flags().String("ring", "", "The id of the ring to be deleted.")
@@ -207,13 +207,13 @@ var ringReleaseCmd = &cobra.Command{
 		ringID, _ := command.Flags().GetString("ring")
 		image, _ := command.Flags().GetString("image")
 		version, _ := command.Flags().GetString("version")
-		hotfix, _ := command.Flags().GetBool("hotfix")
+		force, _ := command.Flags().GetBool("force")
 		releaseAllRings, _ := command.Flags().GetBool("all-rings")
 
 		request := &model.ReleaseRingRequest{
 			Image:   image,
 			Version: version,
-			Hotfix:  hotfix,
+			Force:   force,
 		}
 
 		dryRun, _ := command.Flags().GetBool("dry-run")
