@@ -37,8 +37,8 @@ type UpdateRingRequest struct {
 	APISecurityLock bool   `json:"apiSecurityLock,omitempty"`
 }
 
-// ReleaseRingRequest contains metadata related to changing the installed ring state.
-type ReleaseRingRequest struct {
+// RingReleaseRequest contains metadata related to changing the installed ring state.
+type RingReleaseRequest struct {
 	Image   string
 	Version string
 	Force   bool
@@ -105,24 +105,24 @@ func (request *GetRingsRequest) ApplyToURL(u *url.URL) {
 	u.RawQuery = q.Encode()
 }
 
-// NewReleaseRingRequestFromReader will create an UpdateRingRequest from an io.Reader with JSON data.
-func NewReleaseRingRequestFromReader(reader io.Reader) (*ReleaseRingRequest, error) {
-	var releaseRingRequest ReleaseRingRequest
-	err := json.NewDecoder(reader).Decode(&releaseRingRequest)
+// NewRingReleaseRequestFromReader will create an UpdateRingRequest from an io.Reader with JSON data.
+func NewRingReleaseRequestFromReader(reader io.Reader) (*RingReleaseRequest, error) {
+	var ringReleaseRequest RingReleaseRequest
+	err := json.NewDecoder(reader).Decode(&ringReleaseRequest)
 	if err != nil && err != io.EOF {
 		return nil, errors.Wrap(err, "failed to decode provision ring request")
 	}
 
-	err = releaseRingRequest.Validate()
+	err = ringReleaseRequest.Validate()
 	if err != nil {
 		return nil, errors.Wrap(err, "invalid ring release request")
 	}
 
-	return &releaseRingRequest, nil
+	return &ringReleaseRequest, nil
 }
 
 // Validate validates the values of a ring release request.
-func (request *ReleaseRingRequest) Validate() error {
+func (request *RingReleaseRequest) Validate() error {
 	ctx := context.Background()
 	cli, err := dclient.NewClientWithOpts()
 	if err != nil {

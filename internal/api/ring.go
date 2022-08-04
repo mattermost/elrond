@@ -34,6 +34,10 @@ func initRing(apiRouter *mux.Router, context *Context) {
 	ringRouter.Handle("/installationgroup", addContext(handleRegisterRingInstallationGroup)).Methods("POST")
 	ringRouter.Handle("/installationgroup/{installation-group-id}", addContext(handleDeleteRingInstallationGroup)).Methods("DELETE")
 	ringRouter.Handle("", addContext(handleDeleteRing)).Methods("DELETE")
+
+	ringReleaseRouter := apiRouter.PathPrefix("/release/{release:[A-Za-z0-9]{26}}").Subrouter()
+	ringReleaseRouter.Handle("", addContext(handleGetRingRelease)).Methods("GET")
+
 }
 
 // handleGetRing responds to GET /api/ring/{ring}, returning the ring in question.
@@ -122,16 +126,29 @@ func handleCreateRing(c *Context, w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+
+	release, err := c.Store.CreateRingRelease(&model.RingRelease{
+		Version:  createRingRequest.Version,
+		Image:    createRingRequest.Image,
+		Force:    false,
+		CreateAt: time.Now().UnixNano(),
+	})
+
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to create new ring release")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 	ring := model.Ring{
-		Name:            createRingRequest.Name,
-		Priority:        createRingRequest.Priority,
-		SoakTime:        createRingRequest.SoakTime,
-		Image:           createRingRequest.Image,
-		Version:         createRingRequest.Version,
-		Provisioner:     "elrond",
-		APISecurityLock: createRingRequest.APISecurityLock,
-		State:           model.RingStateCreationRequested,
-		ChangeRequest:   &model.ChangeRequest{},
+		Name:             createRingRequest.Name,
+		Priority:         createRingRequest.Priority,
+		SoakTime:         createRingRequest.SoakTime,
+		ActiveReleaseID:  release.ID,
+		DesiredReleaseID: release.ID,
+		Provisioner:      "elrond",
+		APISecurityLock:  createRingRequest.APISecurityLock,
+		State:            model.RingStateCreationRequested,
 	}
 	iGroup := model.InstallationGroup{}
 	if createRingRequest.InstallationGroup != nil {
@@ -254,14 +271,6 @@ func handleUpdateRing(c *Context, w http.ResponseWriter, r *http.Request) {
 		ring.Name = updateRingRequest.Name
 	}
 
-	if updateRingRequest.Image != "" {
-		ring.Image = updateRingRequest.Image
-	}
-
-	if updateRingRequest.Version != "" {
-		ring.Version = updateRingRequest.Version
-	}
-
 	if updateRingRequest.SoakTime != ring.SoakTime && updateRingRequest.SoakTime != 0 {
 		ring.SoakTime = updateRingRequest.SoakTime
 	}
@@ -284,7 +293,7 @@ func handleUpdateRing(c *Context, w http.ResponseWriter, r *http.Request) {
 // handleReleaseAllRings responds to POST /api/rings/release,
 // releasing a deployment in all rings.
 func handleReleaseAllRings(c *Context, w http.ResponseWriter, r *http.Request) {
-	releaseRingRequest, err := model.NewReleaseRingRequestFromReader(r.Body)
+	ringReleaseRequest, err := model.NewRingReleaseRequestFromReader(r.Body)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to deserialize ring release request body")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -316,6 +325,21 @@ func handleReleaseAllRings(c *Context, w http.ResponseWriter, r *http.Request) {
 	var webhookPayloads []*model.WebhookPayload
 
 	c.Logger.Debug("Checking if all rings can be released")
+
+	ringRelease := model.RingRelease{
+		Version:  ringReleaseRequest.Version,
+		Image:    ringReleaseRequest.Image,
+		Force:    ringReleaseRequest.Force,
+		CreateAt: time.Now().UnixNano(),
+	}
+	//Proactively creating a ring release entry so that all rings to be released get the same release version
+	desiredRelease, err := c.Store.CreateRingRelease(&ringRelease)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to create new ring release")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 	for _, ring := range rings {
 		c.Logger = c.Logger.WithField("ring", ring.ID)
 
@@ -340,13 +364,16 @@ func handleReleaseAllRings(c *Context, w http.ResponseWriter, r *http.Request) {
 				ExtraData: map[string]string{"Environment": c.Environment},
 			}
 
-			if ring.Image != releaseRingRequest.Image || ring.Version != releaseRingRequest.Version {
+			activeRelease, err := c.Store.GetRingRelease(ring.ActiveReleaseID)
+			if err != nil {
+				c.Logger.WithError(err).Error("failed to get ring active release details")
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
 
+			if activeRelease.Image != ringReleaseRequest.Image || activeRelease.Version != ringReleaseRequest.Version {
 				ring.State = model.RingStateReleasePending
-				ring.ChangeRequest.Image = releaseRingRequest.Image
-				ring.ChangeRequest.Version = releaseRingRequest.Version
-				ring.ChangeRequest.ReleaseStart = time.Now().UnixNano()
-				ring.ChangeRequest.Force = releaseRingRequest.Force
+				ring.DesiredReleaseID = desiredRelease.ID
 
 				webhookPayloads = append(webhookPayloads, webhookPayload)
 			}
@@ -394,7 +421,7 @@ func handleReleaseRing(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	releaseRingRequest, err := model.NewReleaseRingRequestFromReader(r.Body)
+	ringReleaseRequest, err := model.NewRingReleaseRequestFromReader(r.Body)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to deserialize ring release request body")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -417,13 +444,31 @@ func handleReleaseRing(c *Context, w http.ResponseWriter, r *http.Request) {
 			ExtraData: map[string]string{"Environment": c.Environment},
 		}
 
-		if ring.Image != releaseRingRequest.Image || ring.Version != releaseRingRequest.Version {
+		activeRelease, err := c.Store.GetRingRelease(ring.ActiveReleaseID)
+		if err != nil {
+			c.Logger.WithError(err).Error("failed to get ring active release details")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		if activeRelease.Image != ringReleaseRequest.Image || activeRelease.Version != ringReleaseRequest.Version {
+
+			ringRelease := model.RingRelease{
+				Version:  ringReleaseRequest.Version,
+				Image:    ringReleaseRequest.Image,
+				Force:    ringReleaseRequest.Force,
+				CreateAt: time.Now().UnixNano(),
+			}
+
+			desiredRelease, err := c.Store.CreateRingRelease(&ringRelease)
+			if err != nil {
+				c.Logger.WithError(err).Error("failed to create new ring release")
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
 
 			ring.State = model.RingStateReleasePending
-			ring.ChangeRequest.Image = releaseRingRequest.Image
-			ring.ChangeRequest.Version = releaseRingRequest.Version
-			ring.ChangeRequest.ReleaseStart = time.Now().UnixNano()
-			ring.ChangeRequest.Force = releaseRingRequest.Force
+			ring.DesiredReleaseID = desiredRelease.ID
 
 			if err = c.Store.UpdateRing(ring); err != nil {
 				c.Logger.WithError(err).Error("failed to update ring")
@@ -496,6 +541,28 @@ func handleRetryReleaseRing(c *Context, w http.ResponseWriter, r *http.Request) 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
 	outputJSON(c, w, ring)
+}
+
+// handleGetRingRelease responds to GET /api/release/{release}, returning the ring release in question.
+func handleGetRingRelease(c *Context, w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	ringReleaseID := vars["release"]
+	c.Logger = c.Logger.WithField("release", ringReleaseID)
+
+	ringRelease, err := c.Store.GetRingRelease(ringReleaseID)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to query ring release")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if ringRelease == nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	outputJSON(c, w, ringRelease)
 }
 
 // handleDeleteRing responds to DELETE /api/ring/{ring}, beginning the process of

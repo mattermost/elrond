@@ -29,6 +29,7 @@ type ringStore interface {
 	GetRingsReleaseInProgress() ([]*model.Ring, error)
 	GetInstallationGroupsForRing(ringID string) ([]*model.InstallationGroup, error)
 	UpdateInstallationGroup(installationGroup *model.InstallationGroup) error
+	GetRingRelease(releaseID string) (*model.RingRelease, error)
 }
 
 // ringProvisioner abstracts the provisioning operations required by the ring supervisor.
@@ -288,13 +289,18 @@ func (s *RingSupervisor) checkReleaseProgress(ring *model.Ring, logger log.Field
 	}
 
 	logger.Infof("Finished releasing ring %s", ring.ID)
-	if ring.ChangeRequest.Force {
-		logger.Info("This is a forced release. Skipping ring soaking time...")
-		logger.Infof("Ring %s release is now complete. Updating current image and version and setting ring to stable.", ring.ID)
 
-		ring.Image = ring.ChangeRequest.Image
-		ring.Version = ring.ChangeRequest.Version
-		ring.ChangeRequest = &model.ChangeRequest{}
+	release, err := s.store.GetRingRelease(ring.DesiredReleaseID)
+	if err != nil {
+		logger.WithError(err).Error("Failed to get the ring release for the installation group pending work")
+		return model.InstallationGroupReleaseFailed
+	}
+
+	if release.Force {
+		logger.Info("This is a forced release. Skipping ring soaking time...")
+		logger.Infof("Ring %s release is now complete. Setting active release ID and moving ring to stable.", ring.ID)
+
+		ring.ActiveReleaseID = ring.DesiredReleaseID
 
 		if err = s.store.UpdateRing(ring); err != nil {
 			logger.WithError(err).Error("Failed to record updated ring version and image")
@@ -320,11 +326,9 @@ func (s *RingSupervisor) soakRing(ring *model.Ring, logger log.FieldLogger) stri
 	}
 
 	logger.Infof("Finished soaking ring %s", ring.ID)
-	logger.Infof("Ring %s release is now complete. Updating current image and version and setting ring to stable.", ring.ID)
+	logger.Infof("Ring %s release is now complete. Setting active release ID and moving ring to stable.", ring.ID)
 
-	ring.Image = ring.ChangeRequest.Image
-	ring.Version = ring.ChangeRequest.Version
-	ring.ChangeRequest = &model.ChangeRequest{}
+	ring.ActiveReleaseID = ring.DesiredReleaseID
 
 	if err = s.store.UpdateRing(ring); err != nil {
 		logger.WithError(err).Error("Failed to record updated ring version and image")

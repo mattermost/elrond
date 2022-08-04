@@ -13,7 +13,7 @@ import (
 )
 
 // ReleaseInstallationGroup releases an installation group ring.
-func (provisioner *ElProvisioner) ReleaseInstallationGroup(installationGroup *model.InstallationGroup, ring *model.Ring) error {
+func (provisioner *ElProvisioner) ReleaseInstallationGroup(installationGroup *model.InstallationGroup, image, version string) error {
 	logger := provisioner.logger.WithField("installationgroup", installationGroup.ID)
 	logger.Infof("Releasing installation group %s", installationGroup.ID)
 
@@ -26,12 +26,12 @@ func (provisioner *ElProvisioner) ReleaseInstallationGroup(installationGroup *mo
 		return errors.Wrapf(err, "failed to get group %s, make sure it exists", installationGroup.ProvisionerGroupID)
 	}
 
-	if group.Image != ring.ChangeRequest.Image || group.Version != ring.ChangeRequest.Version {
-		logger.Infof("Current provisioner group image is %s:%s and should be updated to %s:%s", group.Image, group.Version, ring.ChangeRequest.Image, ring.ChangeRequest.Version)
+	if group.Image != image || group.Version != version {
+		logger.Infof("Current provisioner group image is %s:%s and should be updated to %s:%s", group.Image, group.Version, image, version)
 		request := &cmodel.PatchGroupRequest{
 			ID:      installationGroup.ProvisionerGroupID,
-			Version: &ring.ChangeRequest.Version,
-			Image:   &ring.ChangeRequest.Image,
+			Version: &version,
+			Image:   &image,
 		}
 
 		logger.Infof("Updating provisioner group %s", installationGroup.ProvisionerGroupID)

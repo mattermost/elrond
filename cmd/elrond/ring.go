@@ -50,6 +50,9 @@ func init() {
 	ringReleaseCmd.Flags().Bool("force", false, "When set to true a release is forced and soaking times are ignored.")
 	ringReleaseCmd.Flags().Bool("all-rings", false, "Whether all rings should be released.")
 
+	ringReleaseGetCmd.Flags().String("release", "", "The id of the release to return info.")
+	ringReleaseGetCmd.MarkFlagRequired("release") //nolint
+
 	ringDeleteCmd.Flags().String("ring", "", "The id of the ring to be deleted.")
 	ringDeleteCmd.MarkFlagRequired("ring") //nolint
 
@@ -63,6 +66,7 @@ func init() {
 
 	ringCmd.AddCommand(ringCreateCmd)
 	ringCmd.AddCommand(ringReleaseCmd)
+	ringCmd.AddCommand(ringReleaseGetCmd)
 	ringCmd.AddCommand(ringUpdateCmd)
 	ringCmd.AddCommand(ringDeleteCmd)
 	ringCmd.AddCommand(ringGetCmd)
@@ -210,7 +214,7 @@ var ringReleaseCmd = &cobra.Command{
 		force, _ := command.Flags().GetBool("force")
 		releaseAllRings, _ := command.Flags().GetBool("all-rings")
 
-		request := &model.ReleaseRingRequest{
+		request := &model.RingReleaseRequest{
 			Image:   image,
 			Version: version,
 			Force:   force,
@@ -242,6 +246,36 @@ var ringReleaseCmd = &cobra.Command{
 			if err = printJSON(ring); err != nil {
 				return errors.Wrapf(err, "failed to print ring %s release response", ringID)
 			}
+		}
+
+		return nil
+	},
+}
+
+var ringReleaseGetCmd = &cobra.Command{
+	Use:   "get-release",
+	Short: "Get a particular ring release.",
+	RunE: func(command *cobra.Command, args []string) error {
+		command.SilenceUsage = true
+
+		serverAddress, _ := command.Flags().GetString("server")
+		if _, err := url.Parse(serverAddress); err != nil {
+			return errors.Wrap(err, "provided server address not a valid address")
+		}
+
+		client := model.NewClient(serverAddress)
+
+		releaseID, _ := command.Flags().GetString("release")
+		ringRelease, err := client.GetRingRelease(releaseID)
+		if err != nil {
+			return errors.Wrapf(err, "failed to query ring release %s", releaseID)
+		}
+		if ringRelease == nil {
+			return nil
+		}
+
+		if err = printJSON(ringRelease); err != nil {
+			return errors.Wrapf(err, "failed to print ring release %s response", releaseID)
 		}
 
 		return nil
@@ -332,7 +366,7 @@ var ringListCmd = &cobra.Command{
 			table := tablewriter.NewWriter(os.Stdout)
 			table.SetAlignment(tablewriter.ALIGN_LEFT)
 			table.SetRowLine(true)
-			table.SetHeader([]string{"ID", "STATE", "NAME", "PRIORITY", "INSTALLATION GROUPS", "SOAK TIME", "IMAGE", "VERSION", "RELEASE AT"})
+			table.SetHeader([]string{"ID", "STATE", "NAME", "PRIORITY", "INSTALLATION GROUPS", "SOAK TIME", "ACTIVERELEASEID", "DESIREDRELEASEID", "RELEASE AT"})
 
 			for _, ring := range rings {
 				var igs []string
@@ -349,8 +383,8 @@ var ringListCmd = &cobra.Command{
 					strconv.Itoa(ring.Priority),
 					strings.Join(igs, "\n"),
 					strconv.Itoa(ring.SoakTime),
-					ring.Image,
-					ring.Version,
+					ring.ActiveReleaseID,
+					ring.DesiredReleaseID,
 					strconv.FormatInt(ring.ReleaseAt, 10),
 				})
 			}

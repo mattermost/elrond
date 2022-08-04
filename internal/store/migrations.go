@@ -40,9 +40,8 @@ var migrations = []migration{
 				Priority INT NOT NULL,
 				Provisioner TEXT NOT NULL,
 				SoakTime INT NOT NULL,
-				Image TEXT NOT NULL,
-				Version TEXT NOT NULL,
-				ChangeRequestMetadataRaw BYTEA NULL,
+				ActiveReleaseID TEXT NOT NULL, 
+				DesiredReleaseID TEXT NOT NULL,
 				ReleaseAt BIGINT NOT NULL,
 				CreateAt BIGINT NOT NULL,
 				DeleteAt BIGINT NOT NULL,
@@ -74,6 +73,18 @@ var migrations = []migration{
 				ID TEXT PRIMARY KEY,
 				RingID TEXT NOT NULL,
 				InstallationGroupID TEXT NOT NULL
+			);
+		`); err != nil {
+			return err
+		}
+
+		if _, err := e.Exec(`
+			CREATE TABLE RingRelease (
+				ID TEXT PRIMARY KEY,
+				Image TEXT NOT NULL,
+				Version TEXT NOT NULL,
+				CreateAt BIGINT NOT NULL,
+				Force BOOLEAN NOT NULL
 			);
 		`); err != nil {
 			return err

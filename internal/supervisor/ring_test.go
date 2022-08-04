@@ -83,6 +83,10 @@ func (s *mockRingStore) UpdateInstallationGroup(installationGroup *model.Install
 	return nil
 }
 
+func (s *mockRingStore) GetRingRelease(releaseID string) (*model.RingRelease, error) {
+	return nil, nil
+}
+
 type mockRingProvisioner struct{}
 
 func (p *mockRingProvisioner) PrepareRing(Ring *model.Ring) bool {
@@ -162,10 +166,8 @@ func TestRingSupervisorSupervise(t *testing.T) {
 			supervisor := supervisor.NewRingSupervisor(sqlStore, &mockRingProvisioner{}, "instanceID", logger)
 
 			Ring := &model.Ring{
-				State:         tc.InitialState,
-				Image:         "test-image",
-				Version:       "test-version",
-				ChangeRequest: &model.ChangeRequest{},
+				State:           tc.InitialState,
+				ActiveReleaseID: "active-releaes-id",
 			}
 
 			installationGroup := model.InstallationGroup{

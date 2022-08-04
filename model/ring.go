@@ -15,11 +15,10 @@ type Ring struct {
 	Name               string
 	Priority           int
 	SoakTime           int
-	Image              string
-	Version            string
 	State              string
 	Provisioner        string
-	ChangeRequest      *ChangeRequest
+	ActiveReleaseID    string
+	DesiredReleaseID   string
 	CreateAt           int64
 	DeleteAt           int64
 	ReleaseAt          int64
@@ -31,8 +30,11 @@ type Ring struct {
 
 // RingRelease stores information neeeded for a ring release.
 type RingRelease struct {
-	Image   string
-	Version string
+	ID       string
+	Image    string
+	Version  string
+	CreateAt int64
+	Force    bool
 }
 
 // Clone returns a deep copy the ring.
@@ -73,6 +75,18 @@ func RingsFromReader(reader io.Reader) ([]*Ring, error) {
 	}
 
 	return rings, nil
+}
+
+// RingReleaseFromReader decodes a json-encoded ring from the given io.Reader.
+func RingReleaseFromReader(reader io.Reader) (*RingRelease, error) {
+	ringRelease := RingRelease{}
+	decoder := json.NewDecoder(reader)
+	err := decoder.Decode(&ringRelease)
+	if err != nil && err != io.EOF {
+		return nil, err
+	}
+
+	return &ringRelease, nil
 }
 
 // RingFilter describes the parameters used to constrain a set of rings.

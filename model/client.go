@@ -147,7 +147,7 @@ func (c *Client) UpdateRing(ringID string, request *UpdateRingRequest) (*Ring, e
 }
 
 // ReleaseRing releases a ring deployment form the configured elrond server.
-func (c *Client) ReleaseRing(ringID string, request *ReleaseRingRequest) (*Ring, error) {
+func (c *Client) ReleaseRing(ringID string, request *RingReleaseRequest) (*Ring, error) {
 	resp, err := c.doPost(c.buildURL("/api/ring/%s/release", ringID), request)
 	if err != nil {
 		return nil, err
@@ -163,8 +163,28 @@ func (c *Client) ReleaseRing(ringID string, request *ReleaseRingRequest) (*Ring,
 	}
 }
 
+// GetRingRelease fetches the specified ring release from the configured elrond server.
+func (c *Client) GetRingRelease(releaseID string) (*RingRelease, error) {
+	resp, err := c.doGet(c.buildURL("/api/release/%s", releaseID))
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return RingReleaseFromReader(resp.Body)
+
+	case http.StatusNotFound:
+		return nil, nil
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
 // ReleaseAllRings releases all ring deployments form the configured elrond server.
-func (c *Client) ReleaseAllRings(request *ReleaseRingRequest) ([]*Ring, error) {
+func (c *Client) ReleaseAllRings(request *RingReleaseRequest) ([]*Ring, error) {
 	resp, err := c.doPost(c.buildURL("/api/rings/release"), request)
 	if err != nil {
 		return nil, err
