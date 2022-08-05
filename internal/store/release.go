@@ -43,7 +43,7 @@ func (sqlStore *SQLStore) GetRingRelease(releaseID string) (*model.RingRelease, 
 	return sqlStore.getRingRelease(sqlStore.db, releaseID)
 }
 
-// CreateRingRelease creates the given ring release.
+// GetOrCreateRingRelease checks if the given ring release exists otherwise it creates it.
 func (sqlStore *SQLStore) GetOrCreateRingRelease(ringRelease *model.RingRelease) (*model.RingRelease, error) {
 	return sqlStore.getOrCreateRingRelease(sqlStore.db, ringRelease)
 }
