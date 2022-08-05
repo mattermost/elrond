@@ -39,7 +39,7 @@ type Store interface {
 	UnlockRingInstallationGroup(installationGroupID, lockerID string, force bool) (bool, error)
 
 	GetRingRelease(releaseID string) (*model.RingRelease, error)
-	CreateRingRelease(ringRelease *model.RingRelease) (*model.RingRelease, error)
+	GetOrCreateRingRelease(ringRelease *model.RingRelease) (*model.RingRelease, error)
 
 	CreateWebhook(webhook *model.Webhook) error
 	GetWebhook(webhookID string) (*model.Webhook, error)

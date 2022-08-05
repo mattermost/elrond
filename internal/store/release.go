@@ -44,8 +44,8 @@ func (sqlStore *SQLStore) GetRingRelease(releaseID string) (*model.RingRelease, 
 }
 
 // CreateRingRelease creates the given ring release.
-func (sqlStore *SQLStore) CreateRingRelease(ringRelease *model.RingRelease) (*model.RingRelease, error) {
-	return sqlStore.createRingRelease(sqlStore.db, ringRelease)
+func (sqlStore *SQLStore) GetOrCreateRingRelease(ringRelease *model.RingRelease) (*model.RingRelease, error) {
+	return sqlStore.getOrCreateRingRelease(sqlStore.db, ringRelease)
 }
 
 func (sqlStore *SQLStore) getRingRelease(db queryer, releaseID string) (*model.RingRelease, error) {
@@ -65,19 +65,33 @@ func (sqlStore *SQLStore) getRingRelease(db queryer, releaseID string) (*model.R
 	return &ringRelease, nil
 }
 
-func (sqlStore *SQLStore) createRingRelease(db execer, ringRelease *model.RingRelease) (*model.RingRelease, error) {
-	ringRelease.ID = model.NewID()
+func (sqlStore *SQLStore) getOrCreateRingRelease(db execer, ringRelease *model.RingRelease) (*model.RingRelease, error) {
+	builder := ringReleaseSelect.
+		Where("Image = ?", ringRelease.Image).
+		Where("Version = ?", ringRelease.Version).
+		Where("Force = ?", ringRelease.Force).
+		Limit(1)
 
-	_, err := sqlStore.execBuilder(db, sq.Insert("RingRelease").
-		SetMap(map[string]interface{}{
-			"ID":       ringRelease.ID,
-			"Image":    ringRelease.Image,
-			"Version":  ringRelease.Version,
-			"CreateAt": ringRelease.CreateAt,
-			"Force":    ringRelease.Force,
-		}))
+	err := sqlStore.getBuilder(sqlStore.db, ringRelease, builder)
+
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create installation group")
+		if err == sql.ErrNoRows {
+			ringRelease.ID = model.NewID()
+
+			_, err = sqlStore.execBuilder(db, sq.Insert("RingRelease").
+				SetMap(map[string]interface{}{
+					"ID":       ringRelease.ID,
+					"Image":    ringRelease.Image,
+					"Version":  ringRelease.Version,
+					"CreateAt": ringRelease.CreateAt,
+					"Force":    ringRelease.Force,
+				}))
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to create ring release")
+			}
+		} else {
+			return nil, errors.Wrap(err, "failed to get ring release by image and version")
+		}
 	}
 
 	return ringRelease, nil

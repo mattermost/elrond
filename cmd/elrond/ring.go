@@ -366,7 +366,7 @@ var ringListCmd = &cobra.Command{
 			table := tablewriter.NewWriter(os.Stdout)
 			table.SetAlignment(tablewriter.ALIGN_LEFT)
 			table.SetRowLine(true)
-			table.SetHeader([]string{"ID", "STATE", "NAME", "PRIORITY", "INSTALLATION GROUPS", "SOAK TIME", "ACTIVERELEASE", "DESIREDRELEASE", "RELEASE AT"})
+			table.SetHeader([]string{"ID", "STATE", "NAME", "PRIORITY", "INSTALLATION GROUPS", "SOAK TIME", "ACTIVERELEASE", "DESIREDRELEASE", "FORCE", "RELEASE AT"})
 
 			for _, ring := range rings {
 				activeRelease, err := client.GetRingRelease(ring.ActiveReleaseID)
@@ -394,6 +394,7 @@ var ringListCmd = &cobra.Command{
 					strconv.Itoa(ring.SoakTime),
 					fmt.Sprintf("%s:%s", activeRelease.Image, activeRelease.Version),
 					fmt.Sprintf("%s:%s", desiredRelease.Image, desiredRelease.Version),
+					strconv.FormatBool(desiredRelease.Force),
 					strconv.FormatInt(ring.ReleaseAt, 10),
 				})
 			}

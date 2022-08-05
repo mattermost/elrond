@@ -127,7 +127,7 @@ func (s *RingSupervisor) Supervise(ring *model.Ring) {
 	oldState := ring.State
 	ring.State = newState
 
-	if oldState == model.RingStateReleaseInProgress && newState == model.RingStateSoakingRequested {
+	if oldState == model.RingStateReleaseInProgress && (newState == model.RingStateSoakingRequested || newState == model.RingStateStable) {
 		ring.ReleaseAt = time.Now().UnixNano()
 	}
 

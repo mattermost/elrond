@@ -30,7 +30,7 @@ func TestRingRelease(t *testing.T) {
 			Force:   false,
 		}
 
-		ringRelease, err := sqlStore.CreateRingRelease(ringRelease1)
+		ringRelease, err := sqlStore.GetOrCreateRingRelease(ringRelease1)
 		require.NoError(t, err)
 
 		actualRingRelease1, err := sqlStore.GetRingRelease(ringRelease.ID)
