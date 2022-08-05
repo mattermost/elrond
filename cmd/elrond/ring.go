@@ -366,9 +366,18 @@ var ringListCmd = &cobra.Command{
 			table := tablewriter.NewWriter(os.Stdout)
 			table.SetAlignment(tablewriter.ALIGN_LEFT)
 			table.SetRowLine(true)
-			table.SetHeader([]string{"ID", "STATE", "NAME", "PRIORITY", "INSTALLATION GROUPS", "SOAK TIME", "ACTIVERELEASEID", "DESIREDRELEASEID", "RELEASE AT"})
+			table.SetHeader([]string{"ID", "STATE", "NAME", "PRIORITY", "INSTALLATION GROUPS", "SOAK TIME", "ACTIVERELEASE", "DESIREDRELEASE", "RELEASE AT"})
 
 			for _, ring := range rings {
+				activeRelease, err := client.GetRingRelease(ring.ActiveReleaseID)
+				if err != nil {
+					return errors.Wrap(err, "failed to get active release for table output")
+				}
+				desiredRelease, err := client.GetRingRelease(ring.DesiredReleaseID)
+				if err != nil {
+					return errors.Wrap(err, "failed to get active release for table output")
+				}
+
 				var igs []string
 				if len(ring.InstallationGroups) > 0 {
 					for _, ig := range ring.InstallationGroups {
@@ -383,8 +392,8 @@ var ringListCmd = &cobra.Command{
 					strconv.Itoa(ring.Priority),
 					strings.Join(igs, "\n"),
 					strconv.Itoa(ring.SoakTime),
-					ring.ActiveReleaseID,
-					ring.DesiredReleaseID,
+					fmt.Sprintf("%s:%s", activeRelease.Image, activeRelease.Version),
+					fmt.Sprintf("%s:%s", desiredRelease.Image, desiredRelease.Version),
 					strconv.FormatInt(ring.ReleaseAt, 10),
 				})
 			}
