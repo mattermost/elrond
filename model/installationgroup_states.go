@@ -15,6 +15,8 @@ const (
 	InstallationGroupReleaseSoakingRequested = "release-soaking-requested"
 	// InstallationGroupReleaseFailed is an installation group with a release in failed state.
 	InstallationGroupReleaseFailed = "release-failed"
+	// InstallationGroupReleaseSoakingFailed is an installation group with a soaking in failed state.
+	InstallationGroupReleaseSoakingFailed = "soaking-failed"
 )
 
 // AllInstallationGroupStates is a list of all states an installation group can be in.
@@ -26,6 +28,7 @@ var AllInstallationGroupStates = []string{
 	InstallationGroupReleaseRequested,
 	InstallationGroupReleaseSoakingRequested,
 	InstallationGroupReleaseFailed,
+	InstallationGroupReleaseSoakingFailed,
 }
 
 // AllInstallationGroupStatesPendingWork is a list of all installation group states that the supervisor
@@ -76,7 +79,8 @@ func validTransitionToInstallationGroupStateReleasePending(currentState string) 
 	case InstallationGroupStable,
 		InstallationGroupReleasePending,
 		InstallationGroupReleaseRequested,
-		InstallationGroupReleaseFailed:
+		InstallationGroupReleaseFailed,
+		InstallationGroupReleaseSoakingFailed:
 		return true
 	}
 
@@ -86,7 +90,8 @@ func validTransitionToInstallationGroupStateReleasePending(currentState string) 
 func validTransitionToInstallationGroupStateReleaseInProgress(currentState string) bool {
 	switch currentState {
 	case InstallationGroupReleaseRequested,
-		InstallationGroupReleaseFailed:
+		InstallationGroupReleaseFailed,
+		InstallationGroupReleaseSoakingFailed:
 		return true
 	}
 

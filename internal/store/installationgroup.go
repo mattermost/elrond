@@ -23,6 +23,7 @@ var installationGroupColumns = []string{
 	"InstallationGroup.Name",
 	"InstallationGroup.State",
 	"InstallationGroup.SoakTime",
+	"InstallationGroup.ReleaseAt",
 	"InstallationGroup.ProvisionerGroupID",
 	"InstallationGroup.LockAcquiredBy",
 	"InstallationGroup.LockAcquiredAt",

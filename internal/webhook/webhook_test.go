@@ -60,7 +60,6 @@ func TestGetAndSendWebhooks(t *testing.T) {
 	})
 }
 
-// TODO: add happy-path test.
 func TestSendWebhooks(t *testing.T) {
 	logger := testlib.MakeLogger(t).WithFields(log.Fields{
 		"webhooks-tests": true,
