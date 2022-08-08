@@ -167,7 +167,7 @@ func TestRingSupervisorSupervise(t *testing.T) {
 
 			Ring := &model.Ring{
 				State:           tc.InitialState,
-				ActiveReleaseID: "active-releaes-id",
+				ActiveReleaseID: "active-release-id",
 			}
 
 			installationGroup := model.InstallationGroup{

@@ -8,8 +8,6 @@ import (
 	"github.com/mattermost/elrond/model"
 )
 
-// TODO: will be used soon
-
 // PrepareRing ensures a ring object is ready for provisioning.
 func (provisioner *ElProvisioner) PrepareRing(ring *model.Ring) bool {
 	return true
@@ -60,7 +58,7 @@ func (provisioner *ElProvisioner) RollBackRing(ring *model.Ring) error {
 	return nil
 }
 
-// SoakRing rolls back a ring.
+// SoakRing soaks a ring.
 func (provisioner *ElProvisioner) SoakRing(ring *model.Ring) error {
 	logger := provisioner.logger.WithField("ring", ring.ID)
 	logger.Infof("Soaking ring %s", ring.ID)

@@ -47,8 +47,6 @@ type Store interface {
 	DeleteWebhook(webhookID string) error
 }
 
-// TODO: will be used
-
 // Elrond describes the interface.
 type Elrond interface {
 }

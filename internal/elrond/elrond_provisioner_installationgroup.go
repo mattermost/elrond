@@ -74,3 +74,14 @@ func waitForGroupRelease(client *cmodel.Client, timeout int, groupID string) err
 		}
 	}
 }
+
+// SoakInstallationGroup soaks an installation group
+func (provisioner *ElProvisioner) SoakInstallationGroup(installationGroup *model.InstallationGroup) error {
+	logger := provisioner.logger.WithField("installationgroup", installationGroup.ID)
+	logger.Infof("Soaking installation group %s", installationGroup.ID)
+	// err := soakInstallationGroup(provisioner, installationGroup, logger)
+	// if err != nil {
+	// 	return err
+	// }
+	return nil
+}

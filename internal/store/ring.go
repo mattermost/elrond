@@ -113,6 +113,24 @@ func (sqlStore *SQLStore) GetRingsReleaseInProgress() ([]*model.Ring, error) {
 	return rings, nil
 }
 
+// GetRingsPendingWork returns all rings in a pending work state.
+func (sqlStore *SQLStore) GetRingsPendingWork() ([]*model.Ring, error) {
+	var rings []*model.Ring
+
+	builder := ringSelect.
+		Where(sq.Eq{
+			"State": model.AllRingStatesPendingWork,
+		}).
+		Where("LockAcquiredAt = 0")
+
+	err := sqlStore.selectBuilder(sqlStore.db, &rings, builder)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to query for rings")
+	}
+
+	return rings, nil
+}
+
 // CreateRing records the given ring to the database, assigning it a unique ID.
 func (sqlStore *SQLStore) CreateRing(ring *model.Ring, installationGroup *model.InstallationGroup) error {
 	tx, err := sqlStore.beginTransaction(sqlStore.db)

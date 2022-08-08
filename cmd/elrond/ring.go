@@ -381,7 +381,7 @@ var ringListCmd = &cobra.Command{
 				var igs []string
 				if len(ring.InstallationGroups) > 0 {
 					for _, ig := range ring.InstallationGroups {
-						igs = append(igs, fmt.Sprintf("%s -> %s", ig.Name, ig.State))
+						igs = append(igs, fmt.Sprintf("Name: %s, State: %s, Soaking: %d, Provisioner Group: %s, ReleaseAt: %d", ig.Name, ig.State, ig.SoakTime, ig.ProvisionerGroupID, ig.ReleaseAt))
 					}
 
 				}

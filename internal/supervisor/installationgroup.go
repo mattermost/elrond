@@ -24,11 +24,14 @@ type installationGroupStore interface {
 	GetInstallationGroupsLocked() ([]*model.InstallationGroup, error)
 	GetInstallationGroupsReleaseInProgress() ([]*model.InstallationGroup, error)
 	GetRingRelease(releaseID string) (*model.RingRelease, error)
+	GetRingsPendingWork() ([]*model.Ring, error)
+	UpdateRings(rings []*model.Ring) error
 }
 
 // installationGroupProvisioner abstracts the provisioning operations required by the installation group supervisor.
 type installationGroupProvisioner interface {
 	ReleaseInstallationGroup(installationGroup *model.InstallationGroup, image, version string) error
+	SoakInstallationGroup(installationGroup *model.InstallationGroup) error
 }
 
 // InstallationGroupSupervisor finds installation groups pending work and effects the required changes.
@@ -115,13 +118,31 @@ func (s *InstallationGroupSupervisor) Supervise(installationGroup *model.Install
 
 	oldState := installationGroup.State
 	installationGroup.State = newState
-	if oldState == model.InstallationGroupReleaseSoakingRequested && newState == model.InstallationGroupStable {
+	if oldState == model.InstallationGroupReleaseRequested && (newState == model.InstallationGroupReleaseSoakingRequested || newState == model.InstallationGroupStable) {
 		installationGroup.ReleaseAt = time.Now().UnixNano()
 	}
 
 	if err = s.store.UpdateInstallationGroup(installationGroup); err != nil {
 		logger.WithError(err).Warnf("failed to set installation group state to %s", newState)
 		return
+	}
+
+	//Move rings to release-failed as soon as an IG release fails
+	if newState == model.InstallationGroupReleaseFailed || newState == model.InstallationGroupReleaseSoakingFailed {
+		logger.Info("Installation group release has failed, moving ring to failed state")
+		rings, err := s.store.GetRingsPendingWork()
+		if err != nil {
+			logger.WithError(err).Error("failed to get all rings pending work")
+			return
+		}
+		for _, ring := range rings {
+			ring.State = model.RingStateReleaseFailed
+		}
+
+		if err = s.store.UpdateRings(rings); err != nil {
+			logger.WithError(err).Error("failed to move rings to failed state")
+			return
+		}
 	}
 
 	webhookPayload := &model.WebhookPayload{
@@ -219,7 +240,18 @@ func (s *InstallationGroupSupervisor) releaseInstallationGroup(installationGroup
 }
 
 func (s *InstallationGroupSupervisor) soakInstallationGroup(installationGroup *model.InstallationGroup, logger log.FieldLogger) string {
-	//TODO: WORK to do here
+	timePassed := ((time.Now().UnixNano() - installationGroup.ReleaseAt) / int64(time.Second))
+	if timePassed < int64(installationGroup.SoakTime) {
+		logger.Infof("Installation Group %s will be soaking for another %d seconds...", installationGroup.ID, int64(installationGroup.SoakTime)-timePassed)
+		return model.InstallationGroupReleaseSoakingRequested
+	}
+
+	err := s.provisioner.SoakInstallationGroup(installationGroup)
+	if err != nil {
+		logger.WithError(err).Error("Failed to soak ring")
+		return model.InstallationGroupReleaseSoakingFailed
+	}
+
 	logger.Info("Finished soaking installation group")
 	return model.InstallationGroupStable
 }
