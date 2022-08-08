@@ -16,44 +16,21 @@ var ringSelect sq.SelectBuilder
 
 func init() {
 	ringSelect = sq.
-		Select("Ring.ID", "Name", "Priority", "SoakTime", "Image", "Version", "Provisioner", "State", "CreateAt", "DeleteAt", "ReleaseAt", "APISecurityLock", "LockAcquiredBy", "LockAcquiredAt").
+		Select("Ring.ID", "Name", "Priority", "SoakTime", "ActiveReleaseID", "DesiredReleaseID", "Provisioner", "State", "CreateAt", "DeleteAt", "ReleaseAt", "APISecurityLock", "LockAcquiredBy", "LockAcquiredAt").
 		From("Ring")
-}
-
-type rawRing struct {
-	*model.Ring
-}
-
-type rawRings []*rawRing
-
-func (r *rawRing) toRing() (*model.Ring, error) {
-	return r.Ring, nil
-}
-
-func (rc *rawRings) toRings() ([]*model.Ring, error) {
-	var rings []*model.Ring
-	for _, rawRing := range *rc {
-		ring, err := rawRing.toRing()
-		if err != nil {
-			return nil, err
-		}
-		rings = append(rings, ring)
-	}
-
-	return rings, nil
 }
 
 // GetRing fetches the given ring by id.
 func (sqlStore *SQLStore) GetRing(id string) (*model.Ring, error) {
-	var rawRing rawRing
-	err := sqlStore.getBuilder(sqlStore.db, &rawRing, ringSelect.Where("ID = ?", id))
+	var ring model.Ring
+	err := sqlStore.getBuilder(sqlStore.db, &ring, ringSelect.Where("ID = ?", id))
 	if err == sql.ErrNoRows {
 		return nil, nil
 	} else if err != nil {
 		return nil, errors.Wrap(err, "failed to get ring by id")
 	}
 
-	return rawRing.toRing()
+	return &ring, nil
 }
 
 // GetRings fetches the given page of created rings. The first page is 0.
@@ -62,13 +39,13 @@ func (sqlStore *SQLStore) GetRings(filter *model.RingFilter) ([]*model.Ring, err
 		OrderBy("CreateAt ASC")
 	builder = sqlStore.applyRingsFilter(builder, filter)
 
-	var rawRings rawRings
-	err := sqlStore.selectBuilder(sqlStore.db, &rawRings, builder)
+	var rings []*model.Ring
+	err := sqlStore.selectBuilder(sqlStore.db, &rings, builder)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to query for rings")
 	}
 
-	return rawRings.toRings()
+	return rings, nil
 }
 
 func (sqlStore *SQLStore) applyRingsFilter(builder sq.SelectBuilder, filter *model.RingFilter) sq.SelectBuilder {
@@ -94,13 +71,13 @@ func (sqlStore *SQLStore) GetUnlockedRingsPendingWork() ([]*model.Ring, error) {
 		Where("LockAcquiredAt = 0").
 		OrderBy("CreateAt ASC")
 
-	var rawRings rawRings
-	err := sqlStore.selectBuilder(sqlStore.db, &rawRings, builder)
+	var rings []*model.Ring
+	err := sqlStore.selectBuilder(sqlStore.db, &rings, builder)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to query for rings")
 	}
 
-	return rawRings.toRings()
+	return rings, nil
 }
 
 // GetRingsLocked returns all rings that are under lock.
@@ -177,20 +154,20 @@ func (sqlStore *SQLStore) createRing(execer execer, ring *model.Ring) error {
 	if _, err := sqlStore.execBuilder(execer, sq.
 		Insert("Ring").
 		SetMap(map[string]interface{}{
-			"ID":              ring.ID,
-			"Name":            ring.Name,
-			"Priority":        ring.Priority,
-			"State":           ring.State,
-			"SoakTime":        ring.SoakTime,
-			"Image":           ring.Image,
-			"Version":         ring.Version,
-			"Provisioner":     ring.Provisioner,
-			"CreateAt":        ring.CreateAt,
-			"ReleaseAt":       ring.ReleaseAt,
-			"DeleteAt":        ring.DeleteAt,
-			"APISecurityLock": ring.APISecurityLock,
-			"LockAcquiredBy":  nil,
-			"LockAcquiredAt":  0,
+			"ID":               ring.ID,
+			"Name":             ring.Name,
+			"Priority":         ring.Priority,
+			"State":            ring.State,
+			"SoakTime":         ring.SoakTime,
+			"ActiveReleaseID":  ring.ActiveReleaseID,
+			"DesiredReleaseID": ring.DesiredReleaseID,
+			"Provisioner":      ring.Provisioner,
+			"CreateAt":         ring.CreateAt,
+			"ReleaseAt":        ring.ReleaseAt,
+			"DeleteAt":         ring.DeleteAt,
+			"APISecurityLock":  ring.APISecurityLock,
+			"LockAcquiredBy":   nil,
+			"LockAcquiredAt":   0,
 		}),
 	); err != nil {
 		return errors.Wrap(err, "failed to create ring")
@@ -205,14 +182,14 @@ func (sqlStore *SQLStore) updateRings(execer execer, rings []*model.Ring) error 
 		if _, err := sqlStore.execBuilder(execer, sq.
 			Update("Ring").
 			SetMap(map[string]interface{}{
-				"Name":        ring.Name,
-				"Priority":    ring.Priority,
-				"State":       ring.State,
-				"SoakTime":    ring.SoakTime,
-				"Provisioner": ring.Provisioner,
-				"Image":       ring.Image,
-				"Version":     ring.Version,
-				"ReleaseAt":   ring.ReleaseAt,
+				"Name":             ring.Name,
+				"Priority":         ring.Priority,
+				"State":            ring.State,
+				"SoakTime":         ring.SoakTime,
+				"Provisioner":      ring.Provisioner,
+				"ActiveReleaseID":  ring.ActiveReleaseID,
+				"DesiredReleaseID": ring.DesiredReleaseID,
+				"ReleaseAt":        ring.ReleaseAt,
 			}).
 			Where("ID = ?", ring.ID),
 		); err != nil {
@@ -225,18 +202,17 @@ func (sqlStore *SQLStore) updateRings(execer execer, rings []*model.Ring) error 
 
 // UpdateRing updates the given ring in the database.
 func (sqlStore *SQLStore) UpdateRing(ring *model.Ring) error {
-
 	if _, err := sqlStore.execBuilder(sqlStore.db, sq.
 		Update("Ring").
 		SetMap(map[string]interface{}{
-			"Name":        ring.Name,
-			"Priority":    ring.Priority,
-			"State":       ring.State,
-			"SoakTime":    ring.SoakTime,
-			"Provisioner": ring.Provisioner,
-			"Image":       ring.Image,
-			"Version":     ring.Version,
-			"ReleaseAt":   ring.ReleaseAt,
+			"Name":             ring.Name,
+			"Priority":         ring.Priority,
+			"State":            ring.State,
+			"SoakTime":         ring.SoakTime,
+			"Provisioner":      ring.Provisioner,
+			"ActiveReleaseID":  ring.ActiveReleaseID,
+			"DesiredReleaseID": ring.DesiredReleaseID,
+			"ReleaseAt":        ring.ReleaseAt,
 		}).
 		Where("ID = ?", ring.ID),
 	); err != nil {

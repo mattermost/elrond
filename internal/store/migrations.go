@@ -40,8 +40,8 @@ var migrations = []migration{
 				Priority INT NOT NULL,
 				Provisioner TEXT NOT NULL,
 				SoakTime INT NOT NULL,
-				Image TEXT NOT NULL,
-				Version TEXT NOT NULL,
+				ActiveReleaseID TEXT NOT NULL, 
+				DesiredReleaseID TEXT NOT NULL,
 				ReleaseAt BIGINT NOT NULL,
 				CreateAt BIGINT NOT NULL,
 				DeleteAt BIGINT NOT NULL,
@@ -79,10 +79,29 @@ var migrations = []migration{
 		}
 
 		_, err = e.Exec(`
-			CREATE UNIQUE INDEX RingInstallationGroup_RingID_InstallationGroupID ON RingInstallationGroup (RingID, InstallationGroupID);
-		`)
+		CREATE UNIQUE INDEX RingInstallationGroup_RingID_InstallationGroupID ON RingInstallationGroup (RingID, InstallationGroupID);
+	`)
 		if err != nil {
 			return errors.Wrap(err, "failed to create unique installation group index")
+		}
+
+		if _, err := e.Exec(`
+			CREATE TABLE RingRelease (
+				ID TEXT PRIMARY KEY,
+				Image TEXT NOT NULL,
+				Version TEXT NOT NULL,
+				CreateAt BIGINT NOT NULL,
+				Force BOOLEAN NOT NULL
+			);
+		`); err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`
+			CREATE UNIQUE INDEX RingRelease_Image_Version_Force ON RingRelease (Image, Version, Force);
+		`)
+		if err != nil {
+			return err
 		}
 
 		// Add webhook table.

@@ -23,11 +23,12 @@ type installationGroupStore interface {
 	UnlockRingInstallationGroup(installationGroupID string, lockerID string, force bool) (bool, error)
 	GetInstallationGroupsLocked() ([]*model.InstallationGroup, error)
 	GetInstallationGroupsReleaseInProgress() ([]*model.InstallationGroup, error)
+	GetRingRelease(releaseID string) (*model.RingRelease, error)
 }
 
 // installationGroupProvisioner abstracts the provisioning operations required by the installation group supervisor.
 type installationGroupProvisioner interface {
-	ReleaseInstallationGroup(installationGroup *model.InstallationGroup, ring *model.Ring) error
+	ReleaseInstallationGroup(installationGroup *model.InstallationGroup, image, version string) error
 }
 
 // InstallationGroupSupervisor finds installation groups pending work and effects the required changes.
@@ -88,7 +89,7 @@ func (s *InstallationGroupSupervisor) Supervise(installationGroup *model.Install
 	originalState := installationGroup.State
 	installationGroup, err := s.store.GetInstallationGroupByID(installationGroup.ID)
 	if err != nil {
-		logger.WithError(err).Errorf("Failed to get refreshed ring")
+		logger.WithError(err).Errorf("Failed to get refreshed installation group")
 		return
 	}
 	if installationGroup.State != originalState {
@@ -198,12 +199,22 @@ func (s *InstallationGroupSupervisor) releaseInstallationGroup(installationGroup
 		return model.InstallationGroupReleaseFailed
 	}
 
-	err = s.provisioner.ReleaseInstallationGroup(installationGroup, ring)
+	release, err := s.store.GetRingRelease(ring.DesiredReleaseID)
+	if err != nil {
+		logger.WithError(err).Error("Failed to get the ring release for the installation group pending work")
+		return model.InstallationGroupReleaseFailed
+	}
+
+	err = s.provisioner.ReleaseInstallationGroup(installationGroup, release.Image, release.Version)
 	if err != nil {
 		logger.WithError(err).Error("Failed to release installation group")
 		return model.InstallationGroupReleaseFailed
 	}
 	logger.Infof("Finished releasing installation group %s", installationGroup.ID)
+	if release.Force {
+		logger.Info("This is a forced release. Skipping installation group soaking time...")
+		return model.InstallationGroupStable
+	}
 	return model.InstallationGroupReleaseSoakingRequested
 }
 

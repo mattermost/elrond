@@ -29,6 +29,7 @@ type ringStore interface {
 	GetRingsReleaseInProgress() ([]*model.Ring, error)
 	GetInstallationGroupsForRing(ringID string) ([]*model.InstallationGroup, error)
 	UpdateInstallationGroup(installationGroup *model.InstallationGroup) error
+	GetRingRelease(releaseID string) (*model.RingRelease, error)
 }
 
 // ringProvisioner abstracts the provisioning operations required by the ring supervisor.
@@ -126,7 +127,7 @@ func (s *RingSupervisor) Supervise(ring *model.Ring) {
 	oldState := ring.State
 	ring.State = newState
 
-	if oldState == model.RingStateReleaseInProgress && newState == model.RingStateSoakingRequested {
+	if oldState == model.RingStateReleaseInProgress && (newState == model.RingStateSoakingRequested || newState == model.RingStateStable) {
 		ring.ReleaseAt = time.Now().UnixNano()
 	}
 
@@ -288,6 +289,25 @@ func (s *RingSupervisor) checkReleaseProgress(ring *model.Ring, logger log.Field
 	}
 
 	logger.Infof("Finished releasing ring %s", ring.ID)
+
+	release, err := s.store.GetRingRelease(ring.DesiredReleaseID)
+	if err != nil {
+		logger.WithError(err).Error("Failed to get the ring release for the installation group pending work")
+		return model.InstallationGroupReleaseFailed
+	}
+
+	if release.Force {
+		logger.Info("This is a forced release. Skipping ring soaking time...")
+		logger.Infof("Ring %s release is now complete. Setting active release ID and moving ring to stable.", ring.ID)
+
+		ring.ActiveReleaseID = ring.DesiredReleaseID
+
+		if err = s.store.UpdateRing(ring); err != nil {
+			logger.WithError(err).Error("Failed to record updated ring version and image")
+			return model.RingStateReleaseFailed
+		}
+		return model.RingStateStable
+	}
 	return model.RingStateSoakingRequested
 }
 
@@ -306,7 +326,14 @@ func (s *RingSupervisor) soakRing(ring *model.Ring, logger log.FieldLogger) stri
 	}
 
 	logger.Infof("Finished soaking ring %s", ring.ID)
-	logger.Infof("Ring %s release is now complete. Setting ring to stable.", ring.ID)
+	logger.Infof("Ring %s release is now complete. Setting active release ID and moving ring to stable.", ring.ID)
+
+	ring.ActiveReleaseID = ring.DesiredReleaseID
+
+	if err = s.store.UpdateRing(ring); err != nil {
+		logger.WithError(err).Error("Failed to record updated ring version and image")
+		return model.RingStateSoakingFailed
+	}
 	return model.RingStateStable
 }
 
