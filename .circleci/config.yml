@@ -138,7 +138,7 @@ workflows:
               - main
   tag-builds:
     jobs:
-    - lint:
+    - check-style:
         filters:
           tags:
             only: /^v.*/
