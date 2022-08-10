@@ -4,13 +4,42 @@ executors:
     docker:
       - image: cimg/go:1.18.0
 
+aliases:
+- &restore_cache
+  restore_cache:
+    key: go-mod-v1-{{ checksum "go.sum" }}
+- &save_cache
+  save_cache:
+    key: go-mod-v1-{{ checksum "go.sum" }}
+    paths:
+      - "/go/pkg/mod"
+
+commands:
+  install-docker-buildx:
+    description: Install Docker Buildx
+    steps:
+      - run:
+          name: Install Docker Buildx
+          command: |
+            mkdir -vp ~/.docker/cli-plugins/
+            curl --silent -L "https://github.com/docker/buildx/releases/download/v0.7.1/buildx-v0.7.1.linux-amd64" > ~/.docker/cli-plugins/docker-buildx
+            chmod a+x ~/.docker/cli-plugins/docker-buildx
+            docker buildx version
+            sudo apt-get update && sudo apt-get install -y binfmt-support qemu-user-static
+            docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+            docker run --privileged --rm tonistiigi/binfmt --install arm64
+            docker context create buildcontext
+            docker buildx create buildcontext --use
+
 jobs:
-  lint:
+  check-style:
     executor:
       name: default
     steps:
-      - checkout
-      - run: make check-style
+    - checkout
+    - *restore_cache
+    - run: make check-style
+    - *save_cache
 
   test:
     executor:
@@ -24,45 +53,71 @@ jobs:
       name: default
     steps:
     - checkout
-    - setup_remote_docker
-    - run: make build-image
-    - run: ./scripts/push-image-pr.sh
-    - run:
-        name: Re-run Docker Push if fail
-        command: |
-            sleep 20
-            ./scripts/push-image-pr.sh
-        when: on_fail
+    - setup_remote_docker:
+        version: 20.10.7
+    - install-docker-buildx
+    - run: make push-image-pr
 
   push-docker:
     executor:
       name: default
     steps:
     - checkout
-    - setup_remote_docker
-    - run: make build-image
-    - run: ./scripts/push-image.sh
-    - run:
-        name: Re-run Docker Push if fail
-        command: |
-            sleep 20
-            ./scripts/push-image.sh
-        when: on_fail
+    - setup_remote_docker:
+        version: 20.10.7
+    - install-docker-buildx
+    - run: make push-image
+  
+  scan-image:
+    docker:
+    - image: registry.gitlab.com/gitlab-org/security-products/analyzers/klar:latest
+      environment:
+        GIT_STRATEGY: none
+        CI_APPLICATION_REPOSITORY: mattermost/elrond
+        CLAIR_DB_CONNECTION_STRING: "postgresql://postgres:password@localhost:5432/postgres?sslmode=disable&statement_timeout=60000"
+        DOCKERFILE_PATH: "build/Dockerfile"
+    - image: arminc/clair-db:latest
+    steps:
+    - checkout
+    - run: |
+        export CI_APPLICATION_TAG="${CIRCLE_SHA1:0:7}"
+        export DOCKER_USER=$DOCKER_USERNAME
+        /analyzer run
+    - store_artifacts:
+        path: gl-container-scanning-report.json
+        destination: security-scan
+  
+  release:
+    executor: default
+    steps:
+      - checkout
+      - run:
+          command: |
+            make deps
+            make release
 
 workflows:
   version: 2
-  pr-build:
+  ci-build:
     jobs:
-    - lint
+    - check-style
     - test
     - push-docker-pr:
         context: matterbuild-docker
         requires:
-        - lint
+        - check-style
         - test
+  publish-github-release:
+    jobs:
+      - release:
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only: /v[0-9]+(\.[0-9]+)*/
   main-build:
     jobs:
-    - lint:
+    - check-style:
         filters:
           branches:
             only:
@@ -75,7 +130,7 @@ workflows:
     - push-docker:
           context: matterbuild-docker
           requires:
-          - lint
+          - check-style
           - test
           filters:
             branches:
@@ -98,7 +153,7 @@ workflows:
     - push-docker:
         context: matterbuild-docker
         requires:
-        - lint
+        - check-style
         - test
         filters:
           tags:

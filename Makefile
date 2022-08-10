@@ -67,13 +67,28 @@ build: ## Build the elrond
 	@echo Building Elrond
 	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 $(GO) build -ldflags '$(LDFLAGS)' -gcflags all=-trimpath=$(PWD) -asmflags all=-trimpath=$(PWD) -a -installsuffix cgo -o build/_output/bin/elrond  ./cmd/elrond
 
-build-image:  ## Build the docker image for elrond
+.PHONY: build-image
+build-image:  ## Build the docker image for Elrond
 	@echo Building Elrond Docker Image
-	docker build \
+	echo $(DOCKER_PASSWORD) | docker login --username $(DOCKER_USERNAME) --password-stdin
+	docker buildx build \
+	--platform linux/arm64,linux/amd64 \
 	--build-arg DOCKER_BUILD_IMAGE=$(DOCKER_BUILD_IMAGE) \
 	--build-arg DOCKER_BASE_IMAGE=$(DOCKER_BASE_IMAGE) \
 	. -f build/Dockerfile -t $(ELROND_IMAGE) \
-	--no-cache
+	--no-cache \
+	--push
+
+.PHONY: build-image-with-tag
+build-image-with-tag:  ## Build the docker image for elrond
+	@echo Building Elrond Docker Image
+	echo $(DOCKER_PASSWORD) | docker login --username $(DOCKER_USERNAME) --password-stdin
+	docker build \
+	--platform linux/arm64,linux/amd64 \
+	--build-arg DOCKER_BUILD_IMAGE=$(DOCKER_BUILD_IMAGE) \
+	--build-arg DOCKER_BASE_IMAGE=$(DOCKER_BASE_IMAGE) \
+	. -f build/Dockerfile -t $(ELROND_IMAGE) -t $(ELROND_IMAGE_REPO):${TAG} \
+	--push
 
 .PHONY: push-image-pr
 push-image-pr:
