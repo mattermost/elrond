@@ -60,18 +60,18 @@ workflows:
         requires:
         - lint
         - test
-  master-build:
+  main-build:
     jobs:
     - lint:
         filters:
           branches:
             only:
-            - master
+            - main
     - test:
         filters:
           branches:
             only:
-            - master
+            - main
     - push-docker:
           context: matterbuild-docker
           requires:
@@ -80,7 +80,7 @@ workflows:
           filters:
             branches:
               only:
-              - master
+              - main
   tag-builds:
     jobs:
     - lint:
