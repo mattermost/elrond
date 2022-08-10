@@ -26,7 +26,7 @@ jobs:
     - checkout
     - setup_remote_docker
     - run: make build-image
-    - run: ./scripts/push-docker-pr.sh
+    - run: ./scripts/push-image-pr.sh
     - run:
         name: Re-run Docker Push if fail
         command: |
@@ -41,7 +41,7 @@ jobs:
     - checkout
     - setup_remote_docker
     - run: make build-image
-    - run: ./scripts/push-docker.sh
+    - run: ./scripts/push-image.sh
     - run:
         name: Re-run Docker Push if fail
         command: |
