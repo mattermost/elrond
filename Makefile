@@ -83,7 +83,7 @@ build-image:  ## Build the docker image for Elrond
 build-image-with-tag:  ## Build the docker image for elrond
 	@echo Building Elrond Docker Image
 	echo $(DOCKER_PASSWORD) | docker login --username $(DOCKER_USERNAME) --password-stdin
-	docker buildx \
+	docker buildx build \
 	--platform linux/arm64,linux/amd64 \
 	--build-arg DOCKER_BUILD_IMAGE=$(DOCKER_BUILD_IMAGE) \
 	--build-arg DOCKER_BASE_IMAGE=$(DOCKER_BASE_IMAGE) \
