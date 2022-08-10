@@ -61,34 +61,19 @@ binaries: ## Build binaries of elrond
 	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 $(GO) build -gcflags all=-trimpath=$(PWD) -asmflags all=-trimpath=$(PWD) -a -installsuffix cgo -o build/_output/bin/elrond-linux-arm64 ./cmd/$(APP)
 	GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 $(GO) build -gcflags all=-trimpath=$(PWD) -asmflags all=-trimpath=$(PWD) -a -installsuffix cgo -o build/_output/bin/elrond-darwin-arm64  ./cmd/$(APP)
 
+
 .PHONY: build
-build:
+build: ## Build the elrond
 	@echo Building Elrond
-	GOOS=linux CGO_ENABLED=0 $(GO) build -gcflags all=-trimpath=$(PWD) -asmflags all=-trimpath=$(PWD) -a -installsuffix cgo -o build/_output/bin/main ./cmd/$(APP)
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 $(GO) build -ldflags '$(LDFLAGS)' -gcflags all=-trimpath=$(PWD) -asmflags all=-trimpath=$(PWD) -a -installsuffix cgo -o build/_output/bin/elrond  ./cmd/elrond
 
-
-.PHONY: build-image
-build-image:  ## Build the docker image for Elrond
+build-image:  ## Build the docker image for elrond
 	@echo Building Elrond Docker Image
-	echo $(DOCKER_PASSWORD) | docker login --username $(DOCKER_USERNAME) --password-stdin
-	docker buildx build \
-	--platform linux/arm64,linux/amd64 \
+	docker build \
 	--build-arg DOCKER_BUILD_IMAGE=$(DOCKER_BUILD_IMAGE) \
 	--build-arg DOCKER_BASE_IMAGE=$(DOCKER_BASE_IMAGE) \
 	. -f build/Dockerfile -t $(ELROND_IMAGE) \
-	--no-cache \
-	--push
-
-.PHONY: build-image-with-tag
-build-image-with-tag:  ## Build the docker image for elrond
-	@echo Building Elrond Docker Image
-	echo $(DOCKER_PASSWORD) | docker login --username $(DOCKER_USERNAME) --password-stdin
-	docker buildx build \
-	--platform linux/arm64,linux/amd64 \
-	--build-arg DOCKER_BUILD_IMAGE=$(DOCKER_BUILD_IMAGE) \
-	--build-arg DOCKER_BASE_IMAGE=$(DOCKER_BASE_IMAGE) \
-	. -f build/Dockerfile -t $(ELROND_IMAGE) -t $(ELROND_IMAGE_REPO):${TAG} \
-	--push
+	--no-cache
 
 .PHONY: push-image-pr
 push-image-pr:
