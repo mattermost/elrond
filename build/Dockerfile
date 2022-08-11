@@ -1,6 +1,6 @@
 # Build the Mattermost Elrond
 ARG DOCKER_BUILD_IMAGE=golang:1.18.1
-ARG DOCKER_BASE_IMAGE=alpine:3.15.4
+ARG DOCKER_BASE_IMAGE=docker:20.10.17
 
 FROM ${DOCKER_BUILD_IMAGE} AS build
 WORKDIR /elrond/
@@ -11,13 +11,13 @@ RUN make build
 
 # Final Image
 FROM ${DOCKER_BASE_IMAGE}
-LABEL name="Mattermost Cloud Elrond" \
+LABEL name="Mattermost Elrond" \
   maintainer="cloud-team@mattermost.com" \
   vendor="Mattermost" \
   distribution-scope="public" \
   url="https://mattermost.com" \
   io.k8s.description="Elrond manages and supports ring-based deployments in Mattermost Cloud" \
-  io.k8s.display-name="Mattermost Cloud Elrond"
+  io.k8s.display-name="Mattermost Elrond"
 
 ENV ELROND=/elrond/elrond \
     USER_UID=10001 \
