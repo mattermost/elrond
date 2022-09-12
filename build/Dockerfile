@@ -1,6 +1,6 @@
 # Build the Mattermost Elrond
 ARG DOCKER_BUILD_IMAGE=golang:1.18.1
-ARG DOCKER_BASE_IMAGE=docker:20.10.17
+ARG DOCKER_BASE_IMAGE=docker:dind
 
 FROM ${DOCKER_BUILD_IMAGE} AS build
 WORKDIR /elrond/
