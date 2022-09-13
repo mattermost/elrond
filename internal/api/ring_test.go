@@ -459,7 +459,7 @@ func TestReleaseRing(t *testing.T) {
 		require.NoError(t, err)
 
 		ringResp, err := client.ReleaseRing(ring1.ID, nil)
-		require.EqualError(t, err, "failed with status code 500")
+		require.EqualError(t, err, "failed with status code 400")
 		assert.Nil(t, ringResp)
 
 		ring1, err = client.GetRing(ring1.ID)
@@ -473,7 +473,7 @@ func TestReleaseRing(t *testing.T) {
 		require.NoError(t, err)
 
 		ringResp, err := client.ReleaseRing(ring1.ID, nil)
-		require.EqualError(t, err, "failed with status code 500")
+		require.EqualError(t, err, "failed with status code 400")
 		assert.Nil(t, ringResp)
 	})
 }

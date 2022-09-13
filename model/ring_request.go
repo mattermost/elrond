@@ -5,14 +5,11 @@
 package model
 
 import (
-	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/url"
 	"strconv"
 
-	dclient "github.com/docker/docker/client"
 	"github.com/pkg/errors"
 )
 
@@ -123,16 +120,17 @@ func NewRingReleaseRequestFromReader(reader io.Reader) (*RingReleaseRequest, err
 
 // Validate validates the values of a ring release request.
 func (request *RingReleaseRequest) Validate() error {
-	ctx := context.Background()
-	cli, err := dclient.NewClientWithOpts()
-	if err != nil {
-		return errors.Wrapf(err, "cannot obtain client to check docker image.")
-	}
+	//TODO find another way to validate the docker image
+	// ctx := context.Background()
+	// cli, err := dclient.NewClientWithOpts()
+	// if err != nil {
+	// 	return errors.Wrapf(err, "cannot obtain client to check docker image.")
+	// }
 
-	_, err = cli.DistributionInspect(ctx, fmt.Sprintf("%s:%s", request.Image, request.Version), "")
-	if err != nil {
-		return errors.Wrapf(err, "cannot find the docker image and version specified. Please check they exist.")
-	}
+	// _, err = cli.DistributionInspect(ctx, fmt.Sprintf("%s:%s", request.Image, request.Version), "")
+	// if err != nil {
+	// 	return errors.Wrapf(err, "cannot find the docker image and version specified. Please check they exist.")
+	// }
 
 	return nil
 }
