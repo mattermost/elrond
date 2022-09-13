@@ -23,14 +23,6 @@ ENV ELROND=/elrond/elrond \
     USER_UID=10001 \
     USER_NAME=elrond
 
-RUN apk add curl 
-
-ENV DOCKERVERSION=20.10.17
-RUN curl -fsSLO https://download.docker.com/linux/static/stable/x86_64/docker-${DOCKERVERSION}.tgz \
-  && tar xzvf docker-${DOCKERVERSION}.tgz --strip 1 \
-                 -C /usr/local/bin docker/docker \
-  && rm docker-${DOCKERVERSION}.tgz
-
 RUN  apk update && apk add libc6-compat && apk add ca-certificates
 COPY --from=build /elrond/build/_output/bin/elrond /elrond/elrond
 COPY --from=build /elrond/build/bin /usr/local/bin
