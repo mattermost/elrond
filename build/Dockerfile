@@ -1,6 +1,6 @@
 # Build the Mattermost Elrond
 ARG DOCKER_BUILD_IMAGE=golang:1.18.1
-ARG DOCKER_BASE_IMAGE=docker:dind
+ARG DOCKER_BASE_IMAGE=alpine:3.16.2
 
 FROM ${DOCKER_BUILD_IMAGE} AS build
 WORKDIR /elrond/
@@ -22,6 +22,14 @@ LABEL name="Mattermost Elrond" \
 ENV ELROND=/elrond/elrond \
     USER_UID=10001 \
     USER_NAME=elrond
+
+RUN apk add curl 
+
+ENV DOCKERVERSION=20.10.17
+RUN curl -fsSLO https://download.docker.com/linux/static/stable/x86_64/docker-${DOCKERVERSION}.tgz \
+  && tar xzvf docker-${DOCKERVERSION}.tgz --strip 1 \
+                 -C /usr/local/bin docker/docker \
+  && rm docker-${DOCKERVERSION}.tgz
 
 RUN  apk update && apk add libc6-compat && apk add ca-certificates
 COPY --from=build /elrond/build/_output/bin/elrond /elrond/elrond
