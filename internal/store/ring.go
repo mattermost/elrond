@@ -102,8 +102,7 @@ func (sqlStore *SQLStore) GetRingsReleaseInProgress() ([]*model.Ring, error) {
 	builder := ringSelect.
 		Where(sq.Eq{
 			"State": model.AllRingStatesReleaseInProgress,
-		}).
-		Where("LockAcquiredAt = 0")
+		})
 
 	err := sqlStore.selectBuilder(sqlStore.db, &rings, builder)
 	if err != nil {
@@ -120,9 +119,7 @@ func (sqlStore *SQLStore) GetRingsPendingWork() ([]*model.Ring, error) {
 	builder := ringSelect.
 		Where(sq.Eq{
 			"State": model.AllRingStatesPendingWork,
-		}).
-		Where("LockAcquiredAt = 0")
-
+		})
 	err := sqlStore.selectBuilder(sqlStore.db, &rings, builder)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to query for rings")
