@@ -30,6 +30,8 @@ type ringStore interface {
 	GetInstallationGroupsForRing(ringID string) ([]*model.InstallationGroup, error)
 	UpdateInstallationGroup(installationGroup *model.InstallationGroup) error
 	GetRingRelease(releaseID string) (*model.RingRelease, error)
+	GetRingsPendingWork() ([]*model.Ring, error)
+	UpdateRings(rings []*model.Ring) error
 }
 
 // ringProvisioner abstracts the provisioning operations required by the ring supervisor.
@@ -136,6 +138,24 @@ func (s *RingSupervisor) Supervise(ring *model.Ring) {
 		return
 	}
 
+	//Move pending rings to release-failed as soon as an ring release fails
+	if newState == model.RingStateReleaseFailed || newState == model.RingStateSoakingFailed {
+		logger.Info("Ring release has failed, moving pending rings to failed state")
+		rings, err := s.store.GetRingsPendingWork()
+		if err != nil {
+			logger.WithError(err).Error("failed to get all rings pending work")
+			return
+		}
+		for _, ring := range rings {
+			ring.State = model.RingStateReleaseFailed
+		}
+
+		if err = s.store.UpdateRings(rings); err != nil {
+			logger.WithError(err).Error("failed to move rings to failed state")
+			return
+		}
+	}
+
 	webhookPayload := &model.WebhookPayload{
 		Type:      model.TypeRing,
 		ID:        ring.ID,
@@ -224,7 +244,7 @@ func (s *RingSupervisor) checkRingReleasePending(ring *model.Ring, logger log.Fi
 
 	ringsReleaseInProgress, err := s.store.GetRingsReleaseInProgress()
 	if err != nil {
-		logger.WithError(err).Error("Failed to query for installation groups that are under release")
+		logger.WithError(err).Error("Failed to query for rings that are under release")
 		return model.RingStateReleaseFailed
 	}
 

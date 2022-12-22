@@ -19,6 +19,8 @@ const (
 	RingStateReleaseFailed = "release-failed"
 	// RingStateReleaseInProgress is a ring that the release is in progress.
 	RingStateReleaseInProgress = "release-in-progress"
+	// RingStateReleasePaused is a ring that the release is paused.
+	RingStateReleasePaused = "release-paused"
 	// RingStateSoakingRequested is a ring that is undergoing soak period.
 	RingStateSoakingRequested = "soaking-requested"
 	// RingStateSoakingFailed is a ring that is undergoing soak period.
@@ -48,6 +50,7 @@ var AllRingStates = []string{
 	RingStateReleaseRequested,
 	RingStateReleaseFailed,
 	RingStateReleaseInProgress,
+	RingStateReleasePaused,
 	RingStateSoakingRequested,
 	RingStateSoakingFailed,
 	RingStateReleaseRollbackRequested,
@@ -81,6 +84,12 @@ var AllRingStatesReleaseInProgress = []string{
 	RingStateReleaseRollbackRequested,
 }
 
+// AllRingStatesReleasePending is a list of all ring states that are part of a release pending.
+var AllRingStatesReleasePending = []string{
+	RingStateReleasePaused,
+	RingStateReleasePending,
+}
+
 // AllRingRequestStates is a list of all states that a ring can be put in
 // via the API.
 // Warning:
@@ -102,6 +111,8 @@ func (c *Ring) ValidTransitionState(newState string) bool {
 		return validTransitionToRingStateCreationRequested(c.State)
 	case RingStateReleasePending:
 		return validTransitionToRingStateReleasePending(c.State)
+	case RingStateReleasePaused:
+		return validTransitionToRingStateReleasePaused(c.State)
 	case RingStateReleaseRequested:
 		return validTransitionToRingStateReleaseRequested(c.State)
 	case RingStateReleaseInProgress:
@@ -131,7 +142,18 @@ func validTransitionToRingStateReleasePending(currentState string) bool {
 	switch currentState {
 	case RingStateStable,
 		RingStateReleasePending,
-		RingStateReleaseFailed:
+		RingStateReleaseFailed,
+		RingStateSoakingFailed,
+		RingStateReleasePaused:
+		return true
+	}
+
+	return false
+}
+
+func validTransitionToRingStateReleasePaused(currentState string) bool {
+	switch currentState {
+	case RingStateReleasePending:
 		return true
 	}
 
@@ -142,7 +164,9 @@ func validTransitionToRingStateReleaseRequested(currentState string) bool {
 	switch currentState {
 	case RingStateReleasePending,
 		RingStateReleaseRequested,
-		RingStateReleaseFailed:
+		RingStateReleaseFailed,
+		RingStateSoakingFailed,
+		RingStateReleasePaused:
 		return true
 	}
 

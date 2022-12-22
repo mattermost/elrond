@@ -183,7 +183,7 @@ func (c *Client) GetRingRelease(releaseID string) (*RingRelease, error) {
 	}
 }
 
-// ReleaseAllRings releases all ring deployments form the configured elrond server.
+// ReleaseAllRings releases all ring deployments from the configured elrond server.
 func (c *Client) ReleaseAllRings(request *RingReleaseRequest) ([]*Ring, error) {
 	resp, err := c.doPost(c.buildURL("/api/rings/release"), request)
 	if err != nil {
@@ -197,6 +197,57 @@ func (c *Client) ReleaseAllRings(request *RingReleaseRequest) ([]*Ring, error) {
 
 	default:
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
+// PauseRelease pauses all ring deployments from the configured elrond server.
+func (c *Client) PauseRelease() error {
+	resp, err := c.doPost(c.buildURL("/api/rings/release/pause"), nil)
+	if err != nil {
+		return err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return nil
+
+	default:
+		return errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
+// ResumeRelease resumes all paused ring deployments from the configured elrond server.
+func (c *Client) ResumeRelease() error {
+	resp, err := c.doPost(c.buildURL("/api/rings/release/resume"), nil)
+	if err != nil {
+		return err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return nil
+
+	default:
+		return errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
+// CancelRelease cancels all ring deployments in pending stat for the configured elrond server.
+func (c *Client) CancelRelease() error {
+	resp, err := c.doPost(c.buildURL("/api/rings/release/cancel"), nil)
+	if err != nil {
+		return err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return nil
+
+	default:
+		return errors.Errorf("failed with status code %d", resp.StatusCode)
 	}
 }
 

@@ -24,6 +24,9 @@ func initRing(apiRouter *mux.Router, context *Context) {
 	ringsRouter.Handle("", addContext(handleGetRings)).Methods("GET")
 	ringsRouter.Handle("", addContext(handleCreateRing)).Methods("POST")
 	ringsRouter.Handle("/release", addContext(handleReleaseAllRings)).Methods("POST")
+	ringsRouter.Handle("/release/pause", addContext(handlePauseReleaseRing)).Methods("POST")
+	ringsRouter.Handle("/release/resume", addContext(handleResumeReleaseRing)).Methods("POST")
+	ringsRouter.Handle("/release/cancel", addContext(handleCancelReleaseRing)).Methods("POST")
 
 	ringRouter := apiRouter.PathPrefix("/ring/{ring:[A-Za-z0-9]{26}}").Subrouter()
 	ringRouter.Handle("", addContext(handleGetRing)).Methods("GET")
@@ -116,9 +119,10 @@ func handleGetRings(c *Context, w http.ResponseWriter, r *http.Request) {
 // handleCreateRing responds to POST /api/rings, beginning the process of creating a new
 // ring.
 // sample body:
-// {
-//		"priority": 1,
-// }
+//
+//	{
+//			"priority": 1,
+//	}
 func handleCreateRing(c *Context, w http.ResponseWriter, r *http.Request) {
 	createRingRequest, err := model.NewCreateRingRequestFromReader(r.Body)
 	if err != nil {
@@ -325,6 +329,19 @@ func handleReleaseAllRings(c *Context, w http.ResponseWriter, r *http.Request) {
 	var webhookPayloads []*model.WebhookPayload
 
 	c.Logger.Debug("Checking if all rings can be released")
+
+	ringsPending, err := c.Store.GetRingsInPendingState()
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to get all rings pending work")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	if len(ringsPending) > 0 {
+		c.Logger.Error("Cannot start an all rings release, while another release is pending work")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
 	ringRelease := model.RingRelease{
 		Version:  ringReleaseRequest.Version,
@@ -539,6 +556,76 @@ func handleRetryReleaseRing(c *Context, w http.ResponseWriter, r *http.Request) 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
 	outputJSON(c, w, ring)
+}
+
+// handlePauseReleaseRing responds to POST /api/rings/release/pause, pausing all pending releases
+func handlePauseReleaseRing(c *Context, w http.ResponseWriter, r *http.Request) {
+	ringsPending, err := c.Store.GetRingsInPendingState()
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to get all rings pending work")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	c.Logger.Info("pausing all releases in pending state. Releases already in progress cannot be paused")
+
+	for _, ring := range ringsPending {
+		ring.State = model.RingStateReleasePaused
+	}
+
+	c.Logger.Debug("Updating all rings in a single transaction")
+	if err = c.Store.UpdateRings(ringsPending); err != nil {
+		c.Logger.WithError(err).Error("failed to update rings status to paused in a single transaction")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+}
+
+// handleResumeReleaseRing responds to POST /api/rings/release/pause, pausing all pending releases
+func handleResumeReleaseRing(c *Context, w http.ResponseWriter, r *http.Request) {
+	ringsPaused, err := c.Store.GetRingsInPendingState()
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to get all rings in paused state")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	c.Logger.Info("resuming all releases in paused state")
+
+	for _, ring := range ringsPaused {
+		ring.State = model.RingStateReleasePending
+	}
+
+	c.Logger.Debug("Updating all rings in a single transaction")
+	if err = c.Store.UpdateRings(ringsPaused); err != nil {
+		c.Logger.WithError(err).Error("failed to update rings status to pending in a single transaction")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+}
+
+// handleCancelReleaseRing responds to POST /api/rings/release/pause, pausing all pending releases
+func handleCancelReleaseRing(c *Context, w http.ResponseWriter, r *http.Request) {
+	ringsPending, err := c.Store.GetRingsInPendingState()
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to get all rings in pending state")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	c.Logger.Info("canceling all releases in pending state. Setting desired release same as active. Releases already in progress cannot be cancelled")
+
+	for _, ring := range ringsPending {
+		ring.State = model.RingStateStable
+		ring.DesiredReleaseID = ring.ActiveReleaseID
+	}
+
+	c.Logger.Debug("Updating all rings in a single transaction")
+	if err = c.Store.UpdateRings(ringsPending); err != nil {
+		c.Logger.WithError(err).Error("failed to update rings status to stable and set desired release in a single transaction")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 }
 
 // handleGetRingRelease responds to GET /api/release/{release}, returning the ring release in question.

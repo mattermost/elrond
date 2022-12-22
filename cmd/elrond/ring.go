@@ -11,6 +11,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/olekukonko/tablewriter"
 	"github.com/pkg/errors"
@@ -49,6 +50,9 @@ func init() {
 	ringReleaseCmd.Flags().String("version", "", "The Mattermost version to release to.")
 	ringReleaseCmd.Flags().Bool("force", false, "When set to true a release is forced and soaking times are ignored.")
 	ringReleaseCmd.Flags().Bool("all-rings", false, "Whether all rings should be released.")
+	ringReleaseCmd.Flags().Bool("pause", false, "Whether to pause a release in progress.")
+	ringReleaseCmd.Flags().Bool("resume", false, "Whether to resume a paused release.")
+	ringReleaseCmd.Flags().Bool("cancel", false, "Whether to cancel a release.")
 
 	ringReleaseGetCmd.Flags().String("release", "", "The id of the release to return info.")
 	ringReleaseGetCmd.MarkFlagRequired("release") //nolint
@@ -213,6 +217,9 @@ var ringReleaseCmd = &cobra.Command{
 		version, _ := command.Flags().GetString("version")
 		force, _ := command.Flags().GetBool("force")
 		releaseAllRings, _ := command.Flags().GetBool("all-rings")
+		pauseRelease, _ := command.Flags().GetBool("pause")
+		resumeRelease, _ := command.Flags().GetBool("resume")
+		cancelRelease, _ := command.Flags().GetBool("cancel")
 
 		request := &model.RingReleaseRequest{
 			Image:   image,
@@ -225,6 +232,33 @@ var ringReleaseCmd = &cobra.Command{
 			err := printJSON(request)
 			if err != nil {
 				return errors.Wrap(err, "failed to print API request")
+			}
+
+			return nil
+		}
+
+		if pauseRelease {
+			err := client.PauseRelease()
+			if err != nil {
+				return errors.Wrap(err, "failed to pause all pending releases")
+			}
+
+			return nil
+		}
+
+		if resumeRelease {
+			err := client.ResumeRelease()
+			if err != nil {
+				return errors.Wrap(err, "failed to resume all paused releases")
+			}
+
+			return nil
+		}
+
+		if cancelRelease {
+			err := client.CancelRelease()
+			if err != nil {
+				return errors.Wrap(err, "failed to cancel all pending releases")
 			}
 
 			return nil
@@ -366,7 +400,7 @@ var ringListCmd = &cobra.Command{
 			table := tablewriter.NewWriter(os.Stdout)
 			table.SetAlignment(tablewriter.ALIGN_LEFT)
 			table.SetRowLine(true)
-			table.SetHeader([]string{"ID", "STATE", "NAME", "PRIORITY", "INSTALLATION GROUPS", "SOAK TIME", "ACTIVERELEASE", "DESIREDRELEASE", "FORCE", "RELEASE AT"})
+			table.SetHeader([]string{"ID", "STATE", "NAME", "PRIORITY", "INSTALLATION GROUPS", "SOAK TIME", "REMAINING SOAK TIME", "ACTIVERELEASE", "DESIREDRELEASE", "FORCE", "RELEASE AT"})
 
 			for _, ring := range rings {
 				activeRelease, err := client.GetRingRelease(ring.ActiveReleaseID)
@@ -385,6 +419,11 @@ var ringListCmd = &cobra.Command{
 					}
 
 				}
+				var remainTime = int64(0)
+				timePassed := ((time.Now().UnixNano() - ring.ReleaseAt) / int64(time.Second))
+				if timePassed < int64(ring.SoakTime) {
+					remainTime = int64(ring.SoakTime) - timePassed
+				}
 				table.Append([]string{
 					ring.ID,
 					ring.State,
@@ -392,6 +431,7 @@ var ringListCmd = &cobra.Command{
 					strconv.Itoa(ring.Priority),
 					strings.Join(igs, "\n"),
 					strconv.Itoa(ring.SoakTime),
+					strconv.FormatInt(remainTime, 10),
 					fmt.Sprintf("%s:%s", activeRelease.Image, activeRelease.Version),
 					fmt.Sprintf("%s:%s", desiredRelease.Image, desiredRelease.Version),
 					strconv.FormatBool(desiredRelease.Force),
