@@ -154,3 +154,4 @@ elrond ring release --image "<mattermost-image>" --version "<mattermost-image-ve
 ```
 
 
+test
