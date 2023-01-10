@@ -43,7 +43,16 @@ func (s *mockRingStore) GetRingsReleaseInProgress() ([]*model.Ring, error) {
 	return s.Rings, nil
 }
 
+func (s *mockRingStore) GetRingsPendingWork() ([]*model.Ring, error) {
+	return s.Rings, nil
+}
+
 func (s *mockRingStore) UpdateRing(Ring *model.Ring) error {
+	s.UpdateRingCalls++
+	return nil
+}
+
+func (s *mockRingStore) UpdateRings(rings []*model.Ring) error {
 	s.UpdateRingCalls++
 	return nil
 }

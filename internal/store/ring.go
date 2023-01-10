@@ -62,7 +62,7 @@ func (sqlStore *SQLStore) applyRingsFilter(builder sq.SelectBuilder, filter *mod
 	return builder
 }
 
-// GetUnlockedRingsPendingWork returns an unlocked ring in a pending state.
+// GetUnlockedRingsPendingWork returns rings pending work.
 func (sqlStore *SQLStore) GetUnlockedRingsPendingWork() ([]*model.Ring, error) {
 	builder := ringSelect.
 		Where(sq.Eq{
@@ -74,7 +74,25 @@ func (sqlStore *SQLStore) GetUnlockedRingsPendingWork() ([]*model.Ring, error) {
 	var rings []*model.Ring
 	err := sqlStore.selectBuilder(sqlStore.db, &rings, builder)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to query for rings")
+		return nil, errors.Wrap(err, "failed to query for rings pending work")
+	}
+
+	return rings, nil
+}
+
+// GetRingsInPendingState returns rings in pending state.
+func (sqlStore *SQLStore) GetRingsInPendingState() ([]*model.Ring, error) {
+	builder := ringSelect.
+		Where(sq.Eq{
+			"State": model.AllRingStatesReleasePending,
+		}).
+		Where("LockAcquiredAt = 0").
+		OrderBy("CreateAt ASC")
+
+	var rings []*model.Ring
+	err := sqlStore.selectBuilder(sqlStore.db, &rings, builder)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to query for rings in pending state")
 	}
 
 	return rings, nil
@@ -106,7 +124,7 @@ func (sqlStore *SQLStore) GetRingsReleaseInProgress() ([]*model.Ring, error) {
 
 	err := sqlStore.selectBuilder(sqlStore.db, &rings, builder)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to query for rings")
+		return nil, errors.Wrap(err, "failed to query for rings with release in progress")
 	}
 
 	return rings, nil

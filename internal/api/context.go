@@ -40,6 +40,8 @@ type Store interface {
 
 	GetRingRelease(releaseID string) (*model.RingRelease, error)
 	GetOrCreateRingRelease(ringRelease *model.RingRelease) (*model.RingRelease, error)
+	GetUnlockedRingsPendingWork() ([]*model.Ring, error)
+	GetRingsInPendingState() ([]*model.Ring, error)
 
 	CreateWebhook(webhook *model.Webhook) error
 	GetWebhook(webhookID string) (*model.Webhook, error)
