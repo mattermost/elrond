@@ -1,0 +1,6 @@
+---
+on: [push]
+
+jobs:
+  test:
+    uses: ./.github/workflows/test.yml
