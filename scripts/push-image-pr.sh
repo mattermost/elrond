@@ -7,9 +7,10 @@ cat BASH_ENV | while read line; do
 	export $line
 done
 
-export TAG="${CIRCLE_SHA1:0:7}"
+: ${GITHUB_SHA:?}
 
-echo $DOCKER_PASSWORD | docker login --username $DOCKER_USERNAME --password-stdin
+export TAG="${GITHUB_SHA:0:7}"
+
 make build-image-with-tag
 
 rm BASH_ENV

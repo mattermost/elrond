@@ -2,18 +2,20 @@
 set -e
 set -u
 
+: ${GITHUB_REF_TYPE:?}
+: ${GITHUB_REF:?}
+
 env >> BASH_ENV
 cat BASH_ENV | while read line; do
 	export $line
 done
-if [ -z "${CIRCLE_TAG:-}" ]; then
-  echo "Pushing latest for $CIRCLE_BRANCH..."
+if [ "${GITHUB_REF_TYPE:-}" = "branch" ]; then
+  echo "Pushing latest for $GITHUB_REF..."
   export TAG=latest
 else
-  echo "Pushing release $CIRCLE_TAG..."
-  export TAG="$CIRCLE_TAG"
+  echo "Pushing release $GITHUB_REF..."
+  export TAG="$GITHUB_REF"
 fi
-echo $DOCKER_PASSWORD | docker login --username $DOCKER_USERNAME --password-stdin
 make build-image-with-tag
 
 rm BASH_ENV

@@ -1,0 +1,17 @@
+---
+on:
+  push:
+    tags:
+    - v[0-9]+(\.[0-9]+)*
+
+env:
+  # TODO check if something's available at org level
+  GITHUB_TOKEN: "${{ secrets.GITHUB_RELEASE_TOKEN }}"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - run: make deps
+    - run: make release

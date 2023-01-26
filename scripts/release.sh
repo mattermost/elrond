@@ -1,15 +1,28 @@
 # Usage: sh release.sh
-# Note: To run this script locally you need to export environment variables CIRCLE_TAG and GITHUB_TOKEN.
+# Note: To run this script locally you need to export environment variables GITHUB_REF and GITHUB_TOKEN.
 # Stop script on first error
 set -xe
 
-FUTURE_RELEASE_SHA=$(hub rev-parse HEAD)
-LATEST_RELEASE=$(hub release | head -n 1)
+# Verify that required variables are available
+: ${GITHUB_REF:?}
+: ${GITHUB_TOKEN:?}
+
+# TODO remove the following, just checking what's on the runner
+which hub
+which release-notes
+exit 1
+
+# Make the token readily available for the gh CLI
+export GH_TOKEN="$GITHUB_TOKEN"
+
+FUTURE_RELEASE_SHA=$(git rev-parse HEAD)
+LATEST_RELEASE=$(gh release view | grep -E '^tag:' | awk '{ print $2 }')
 # The following fixes the script to work in the case that there isn't a previous release in place.
 if [[ "$LATEST_RELEASE" == "" ]]; then
   LATEST_RELEASE=$(git log --pretty=%H | tail -n 1)
 fi
-LATEST_RELEASE_SHA=$(hub rev-parse "${LATEST_RELEASE}")
+LATEST_RELEASE_SHA=$(git rev-parse "${LATEST_RELEASE}")
+# ...TODO, keep implementing from here
 LATEST_RELEASE_NEXT_COMMIT_SHA=$(hub log "${LATEST_RELEASE}"..HEAD --oneline --pretty=%H | tail -n1)
 mkdir -p ./build/_output/docs/
 release-notes --org mattermost --repo elrond --start-sha "${LATEST_RELEASE_NEXT_COMMIT_SHA}" --end-sha "${FUTURE_RELEASE_SHA}"  --output ./build/_output/docs/relnote.md --required-author "" --branch main

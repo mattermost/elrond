@@ -17,4 +17,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - uses: ./.github/actions/docker-prepare
-    - run: "docker version"
+    - run: "make push-image-pr"
+      if: "${{ inputs.is_pr }}"
+    - run: "make push-image"
+      if: "${{ !inputs.is_pr }}"
