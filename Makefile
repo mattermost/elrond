@@ -70,8 +70,8 @@ build: ## Build the elrond
 .PHONY: build-image
 build-image:  ## Build the docker image for Elrond
 	@echo Building Elrond Docker Image
-	: $${DOCKER_USERNAME}
-	: $${DOCKER_PASSWORD}
+	: $${DOCKER_USERNAME:?}
+	: $${DOCKER_PASSWORD:?}
 	echo $(DOCKER_PASSWORD) | docker login --username $(DOCKER_USERNAME) --password-stdin
 	# TODO re-enable the command below, before merging the PR
 	echo docker buildx build \
@@ -85,8 +85,8 @@ build-image:  ## Build the docker image for Elrond
 .PHONY: build-image-with-tag
 build-image-with-tag:  ## Build the docker image for elrond
 	@echo Building Elrond Docker Image
-	: $${DOCKER_USERNAME}
-	: $${DOCKER_PASSWORD}
+	: $${DOCKER_USERNAME:?}
+	: $${DOCKER_PASSWORD:?}
 	: $${TAG}
 	echo $(DOCKER_PASSWORD) | docker login --username $(DOCKER_USERNAME) --password-stdin
 	# TODO re-enable the command below, before merging the PR

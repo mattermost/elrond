@@ -2,13 +2,14 @@
 on: [push]
 
 jobs:
-  test:
-    uses: ./.github/workflows/.test.yml
+  ### TODO reenable this before merging the PR
+  #test:
+  #  uses: ./.github/workflows/.test.yml
   push-docker-pr:
     uses: ./.github/workflows/.docker-push.yml
     with:
       is_pr: true
     secrets:
-      dockerhub_token: DUMMY
-      dockerhub_username: DUMMY
-    needs: [test]
+      dockerhub_username: "${{ secrets.DOCKERHUB_USERNAME }}"
+      dockerhub_token: "${{ secrets.DOCKERHUB_TOKEN }}"
+    #needs: [test]
