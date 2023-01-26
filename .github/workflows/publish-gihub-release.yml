@@ -1,8 +1,8 @@
 ---
 on:
   push:
-    tags:
-    - v[0-9]+(\.[0-9]+)*
+#    tags:
+#    - v[0-9]+(\.[0-9]+)*
 
 env:
   GH_TOKEN: "${{ secrets.GH_TOKEN }}"
@@ -10,6 +10,8 @@ env:
 jobs:
   release:
     runs-on: ubuntu-latest
+    container:
+      image: golang:1.18.0-bullseye
     steps:
     - uses: actions/checkout@v3
     - run: make deps

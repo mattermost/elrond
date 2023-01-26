@@ -118,8 +118,8 @@ release:
 
 .PHONY: deps
 deps:
-	sudo apt update && sudo apt install hub git
-	go get k8s.io/release/cmd/release-notes
+	apt-get update && apt-get install -y hub git
+	go install k8s.io/release/cmd/release-notes@latest
 
 .PHONY: unittest
 unittest:
