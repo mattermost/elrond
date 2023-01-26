@@ -5,9 +5,8 @@ on:
     - main
 
 jobs:
-  ### TODO reenable this before merging the PR
-  #test:
-  #  uses: ./.github/workflows/.test.yml
+  test:
+    uses: ./.github/workflows/.test.yml
   push-docker-pr:
     uses: ./.github/workflows/.docker-push.yml
     with:
@@ -15,4 +14,4 @@ jobs:
     secrets:
       dockerhub_username: "${{ secrets.DOCKERHUB_USERNAME }}"
       dockerhub_token: "${{ secrets.DOCKERHUB_TOKEN }}"
-    #needs: [test]
+    needs: [test]
