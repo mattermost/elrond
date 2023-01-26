@@ -1,19 +1,16 @@
 # Usage: sh release.sh
-# Note: To run this script locally you need to export environment variables GITHUB_REF and GITHUB_TOKEN.
+# Note: To run this script locally you need to export environment variables GITHUB_REF and GH_TOKEN.
 # Stop script on first error
 set -xe
 
 # Verify that required variables are available
 : ${GITHUB_REF:?}
-: ${GITHUB_TOKEN:?}
+: ${GH_TOKEN:?}
 
 # TODO remove the following, just checking what's on the runner
 which hub
 which release-notes
 exit 1
-
-# Make the token readily available for the gh CLI
-export GH_TOKEN="$GITHUB_TOKEN"
 
 FUTURE_RELEASE_SHA=$(git rev-parse HEAD)
 LATEST_RELEASE=$(gh release view | grep -E '^tag:' | awk '{ print $2 }')
