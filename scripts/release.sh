@@ -1,16 +1,11 @@
 # Usage: sh release.sh
-# Note: To run this script locally you need to export environment variables GITHUB_REF_NAME and GH_TOKEN.
+# Note: To run this script locally you need to export environment variables GITHUB_REF_NAME and GITHUB_TOKEN.
 # Stop script on first error
 set -xe
 
 # Verify that required variables are available
 : ${GITHUB_REF_NAME:?}
-: ${GH_TOKEN:?}
-
-echo $PATH
-find / -name release-notes -type f
-
-export GITHUB_TOKEN=${GH_TOKEN}
+: ${GITHUB_TOKEN:?}
 
 FUTURE_RELEASE_SHA=$(hub rev-parse HEAD)
 LATEST_RELEASE=$(hub release | head -n 1)
