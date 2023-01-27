@@ -1,5 +1,8 @@
-# Usage: sh release.sh
+#!/bin/bash
+
+# Usage: ./release.sh
 # Note: To run this script locally you need to export environment variables GITHUB_REF_NAME and GITHUB_TOKEN.
+
 # Stop script on first error
 set -xe
 
