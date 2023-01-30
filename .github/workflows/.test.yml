@@ -1,4 +1,5 @@
 ---
+name: test
 on:
   workflow_call:
 
@@ -8,23 +9,29 @@ jobs:
     container:
       image: golang:1.18.0-bullseye
     steps:
-    - uses: actions/checkout@v3
-    - uses: actions/cache@v3
+    - name: ci/checkout-repo
+      uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.3.0
+    - name: ci/cache-gopath
+      uses: actions/cache@v3
       with:
         key: go-mod-v1-${{ hashFiles('go.sum') }}
         path: /go
       if: "${{ !env.ACT }}"
-    - run: make check-style
+    - name: ci/check-code-style
+      run: make check-style
 
   test:
     runs-on: ubuntu-latest
     container:
       image: golang:1.18.0-bullseye
     steps:
-    - uses: actions/checkout@v3
-    - uses: actions/cache@v3
+    - name: ci/checkout-repo
+      uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.3.0
+    - name: ci/cache-gopath
+      uses: actions/cache@v3
       with:
         key: go-mod-v1-${{ hashFiles('go.sum') }}
         path: /go
       if: "${{ !env.ACT }}"
-    - run: make unittest
+    - name: ci/unit-test
+      run: make unittest

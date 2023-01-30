@@ -1,4 +1,5 @@
 ---
+name: docker-push
 on:
   workflow_call:
     inputs:
@@ -19,9 +20,13 @@ jobs:
   docker-push:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - uses: ./.github/actions/docker-prepare
-    - run: "make push-image-pr"
+    - name: ci/checkout-repo
+      uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.3.0
+    - name: ci/prepare-docker-environment
+      uses: ./.github/actions/docker-prepare
+    - name: ci/push-image-pr
+      run: "make push-image-pr"
       if: "${{ inputs.is_pr }}"
-    - run: "make push-image"
+    - name: ci/push-image
+      run: "make push-image"
       if: "${{ !inputs.is_pr }}"
