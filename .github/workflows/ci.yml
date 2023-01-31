@@ -1,8 +1,10 @@
 ---
 name: ci
 on:
+  pull_request:
   push:
-    branches: ["*"]
+    branches:
+      - main
 
 jobs:
   test:
