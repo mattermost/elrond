@@ -12,9 +12,7 @@ jobs:
     uses: ./.github/workflows/.docker-push.yml
     with:
       is_pr: false
-    secrets:
-      dockerhub_username: "${{ secrets.DOCKERHUB_USERNAME }}"
-      dockerhub_token: "${{ secrets.DOCKERHUB_TOKEN }}"
+    secrets: inherit
     needs: [test]
   release:
     runs-on: ubuntu-latest

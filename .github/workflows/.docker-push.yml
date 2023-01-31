@@ -6,15 +6,10 @@ on:
       is_pr:
         required: true
         type: boolean
-    secrets:
-      dockerhub_username:
-        required: true
-      dockerhub_token:
-        required: true
 
 env:
-  DOCKER_USERNAME: "${{ secrets.dockerhub_username }}"
-  DOCKER_PASSWORD: "${{ secrets.dockerhub_token }}"
+  DOCKER_USERNAME: "${{ secrets.DOCKERHUB_USERNAME }}"
+  DOCKER_PASSWORD: "${{ secrets.DOCKERHUB_TOKEN }}"
 
 jobs:
   docker-push:
