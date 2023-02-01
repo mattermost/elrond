@@ -4,3 +4,4 @@ coverage.out
 /.idea
 build/_output/
 bin/*
+**.swp

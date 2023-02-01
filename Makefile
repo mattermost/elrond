@@ -70,6 +70,8 @@ build: ## Build the elrond
 .PHONY: build-image
 build-image:  ## Build the docker image for Elrond
 	@echo Building Elrond Docker Image
+	: $${DOCKER_USERNAME:?}
+	: $${DOCKER_PASSWORD:?}
 	echo $(DOCKER_PASSWORD) | docker login --username $(DOCKER_USERNAME) --password-stdin
 	docker buildx build \
 	--platform linux/arm64,linux/amd64 \
@@ -82,6 +84,9 @@ build-image:  ## Build the docker image for Elrond
 .PHONY: build-image-with-tag
 build-image-with-tag:  ## Build the docker image for elrond
 	@echo Building Elrond Docker Image
+	: $${DOCKER_USERNAME:?}
+	: $${DOCKER_PASSWORD:?}
+	: $${TAG:?}
 	echo $(DOCKER_PASSWORD) | docker login --username $(DOCKER_USERNAME) --password-stdin
 	docker buildx build \
 	--platform linux/arm64,linux/amd64 \
@@ -93,12 +98,12 @@ build-image-with-tag:  ## Build the docker image for elrond
 .PHONY: push-image-pr
 push-image-pr:
 	@echo Push Image PR
-	bash ./scripts/push-image-pr.sh
+	./scripts/push-image-pr.sh
 
 .PHONY: push-image
 push-image:
 	@echo Push Image
-	bash ./scripts/push-image.sh
+	./scripts/push-image.sh
 
 .PHONY: install
 install: build
@@ -107,12 +112,12 @@ install: build
 .PHONY: release
 release:
 	@echo Cut a release
-	bash ./scripts/release.sh
+	./scripts/release.sh
 
 .PHONY: deps
 deps:
-	sudo apt update && sudo apt install hub git
-	go get k8s.io/release/cmd/release-notes
+	apt-get update && apt-get install -y hub git
+	go install k8s.io/release/cmd/release-notes@latest
 
 .PHONY: unittest
 unittest:
