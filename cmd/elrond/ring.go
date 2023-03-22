@@ -53,7 +53,7 @@ func init() {
 	ringReleaseCmd.Flags().Bool("pause", false, "Whether to pause a release in progress.")
 	ringReleaseCmd.Flags().Bool("resume", false, "Whether to resume a paused release.")
 	ringReleaseCmd.Flags().Bool("cancel", false, "Whether to cancel a release.")
-	ringReleaseCmd.Flags().StringArray("env-variable", []string{}, "Additional environment variables for the installation group release. Accepts multiple values, for example: '... --env-variable abc=123 --env-variable def=456'")
+	ringReleaseCmd.Flags().StringArray("env-variable", []string{}, "Additional environment variables for the installation group release. Accepts multiple values, for example: '... --env-variable TEST_NAME:TEST_VALUE --env-variable TEST_NAME_2:TEST_VALUE_2'")
 
 	ringReleaseGetCmd.Flags().String("release", "", "The id of the release to return info.")
 	ringReleaseGetCmd.MarkFlagRequired("release") //nolint
