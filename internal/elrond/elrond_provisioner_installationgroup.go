@@ -31,7 +31,7 @@ func (provisioner *ElProvisioner) ReleaseInstallationGroup(installationGroup *mo
 	for _, envVar := range strings.Split(envVariables, ",") {
 		envVarName := strings.Split(envVar, ":")[0]
 		envVarValue := strings.Split(envVar, ":")[1]
-		mattermostEnv[envVarName] = cmodel.EnvVar{envVarValue, nil}
+		mattermostEnv[envVarName] = cmodel.EnvVar{Value: envVarValue, ValueFrom: nil}
 	}
 
 	if group.Image != image || group.Version != version || checkChangeGroupEnvVariables(group.MattermostEnv, mattermostEnv) {
