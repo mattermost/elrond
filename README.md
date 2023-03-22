@@ -145,6 +145,13 @@ elrond ring release --image "<mattermost-image>" --version "<mattermost-image-ve
 
 The Elrond will follow the priority numbers and release first the ring with the lowest priority number. Then after the soak time has passed it will move to the next ring based on priority. 
 
+Elrond supports Mattermost Provisioner group environment variable changes. You can perform a ring release with same or new Mattermost version and change environment variables as well passing the flag as shown below:
+```bash
+elrond ring release --image "<mattermost-image>" --version "<mattermost-image-version>" --ring "<ring-id>" --env-variable "<ENV_VARIABLE_NAME:ENV_VARIABLE_VALUE>" --env-variable "<ENV_VARIABLE_NAME:ENV_VARIABLE_VALUE>"
+i.e.
+elrond ring release --image mattermost/mattermost-enterprise-edition --version version-2 --ring "123456789" --env-variable "MM_TEST:123"
+```
+
 ### Forcing a ring release
 There are cases that a force release is required for example for an urgent bug fix or security patch. When a force flag is passed the soak times are ignored and the release process will be a lot faster.
 

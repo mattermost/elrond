@@ -23,14 +23,16 @@ var ringReleaseColumns = []string{
 	"RingRelease.Version",
 	"RingRelease.CreateAt",
 	"RingRelease.Force",
+	"RingRelease.EnvVariables",
 }
 
 type ringRelease struct {
-	ID       string
-	Image    string
-	Version  string
-	CreateAt int64
-	Force    bool
+	ID           string
+	Image        string
+	Version      string
+	EnvVariables string
+	CreateAt     int64
+	Force        bool
 }
 
 func init() {
@@ -70,6 +72,7 @@ func (sqlStore *SQLStore) getOrCreateRingRelease(db execer, ringRelease *model.R
 		Where("Image = ?", ringRelease.Image).
 		Where("Version = ?", ringRelease.Version).
 		Where("Force = ?", ringRelease.Force).
+		Where("EnvVariables = ?", ringRelease.EnvVariables).
 		Limit(1)
 
 	err := sqlStore.getBuilder(sqlStore.db, ringRelease, builder)
@@ -80,11 +83,12 @@ func (sqlStore *SQLStore) getOrCreateRingRelease(db execer, ringRelease *model.R
 
 			_, err = sqlStore.execBuilder(db, sq.Insert("RingRelease").
 				SetMap(map[string]interface{}{
-					"ID":       ringRelease.ID,
-					"Image":    ringRelease.Image,
-					"Version":  ringRelease.Version,
-					"CreateAt": ringRelease.CreateAt,
-					"Force":    ringRelease.Force,
+					"ID":           ringRelease.ID,
+					"Image":        ringRelease.Image,
+					"Version":      ringRelease.Version,
+					"EnvVariables": ringRelease.EnvVariables,
+					"CreateAt":     ringRelease.CreateAt,
+					"Force":        ringRelease.Force,
 				}))
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to create ring release")

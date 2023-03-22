@@ -30,11 +30,12 @@ type Ring struct {
 
 // RingRelease stores information neeeded for a ring release.
 type RingRelease struct {
-	ID       string
-	Image    string
-	Version  string
-	CreateAt int64
-	Force    bool
+	ID           string
+	Image        string
+	Version      string
+	EnvVariables string
+	CreateAt     int64
+	Force        bool
 }
 
 // Clone returns a deep copy the ring.
