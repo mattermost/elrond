@@ -36,9 +36,10 @@ type UpdateRingRequest struct {
 
 // RingReleaseRequest contains metadata related to changing the installed ring state.
 type RingReleaseRequest struct {
-	Image   string
-	Version string
-	Force   bool
+	Image        string
+	Version      string
+	Force        bool
+	EnvVariables string
 }
 
 // GetRingsRequest describes the parameters to request a list of rings.

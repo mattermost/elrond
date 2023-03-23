@@ -5,6 +5,7 @@
 package elrond
 
 import (
+	"strings"
 	"time"
 
 	"github.com/mattermost/elrond/model"
@@ -13,7 +14,7 @@ import (
 )
 
 // ReleaseInstallationGroup releases an installation group ring.
-func (provisioner *ElProvisioner) ReleaseInstallationGroup(installationGroup *model.InstallationGroup, image, version string) error {
+func (provisioner *ElProvisioner) ReleaseInstallationGroup(installationGroup *model.InstallationGroup, image, version, envVariables string) error {
 	logger := provisioner.logger.WithField("installationgroup", installationGroup.ID)
 	logger.Infof("Releasing installation group %s", installationGroup.ID)
 
@@ -26,12 +27,20 @@ func (provisioner *ElProvisioner) ReleaseInstallationGroup(installationGroup *mo
 		return errors.Wrapf(err, "failed to get group %s, make sure it exists", installationGroup.ProvisionerGroupID)
 	}
 
-	if group.Image != image || group.Version != version {
-		logger.Infof("Current provisioner group image is %s:%s and should be updated to %s:%s", group.Image, group.Version, image, version)
+	mattermostEnv := make(cmodel.EnvVarMap)
+	for _, envVar := range strings.Split(envVariables, ",") {
+		envVarName := strings.Split(envVar, ":")[0]
+		envVarValue := strings.Split(envVar, ":")[1]
+		mattermostEnv[envVarName] = cmodel.EnvVar{Value: envVarValue, ValueFrom: nil}
+	}
+
+	if group.Image != image || group.Version != version || checkChangeGroupEnvVariables(group.MattermostEnv, mattermostEnv) {
+		logger.Infof("Image or group env variable changes were detected. Current provisioner group image is %s:%s and new image is %s:%s", group.Image, group.Version, image, version)
 		request := &cmodel.PatchGroupRequest{
-			ID:      installationGroup.ProvisionerGroupID,
-			Version: &version,
-			Image:   &image,
+			ID:            installationGroup.ProvisionerGroupID,
+			Version:       &version,
+			Image:         &image,
+			MattermostEnv: mattermostEnv,
 		}
 
 		logger.Infof("Updating provisioner group %s", installationGroup.ProvisionerGroupID)
@@ -84,4 +93,22 @@ func (provisioner *ElProvisioner) SoakInstallationGroup(installationGroup *model
 	// 	return err
 	// }
 	return nil
+}
+
+func checkChangeGroupEnvVariables(group1, group2 cmodel.EnvVarMap) bool {
+	if len(group1) != len(group2) {
+		logger.Info("There is a difference in the number of env variables in the two groups. Probably a new env variable is added...")
+		return true
+	}
+	for i, envVar1 := range group1 {
+		for j, envVar2 := range group2 {
+			if i == j {
+				if envVar1.Value != envVar2.Value {
+					logger.Infof("Env var %s has changed from %s to %s", i, envVar1.Value, envVar2.Value)
+					return true
+				}
+			}
+		}
+	}
+	return false
 }

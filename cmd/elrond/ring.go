@@ -53,6 +53,7 @@ func init() {
 	ringReleaseCmd.Flags().Bool("pause", false, "Whether to pause a release in progress.")
 	ringReleaseCmd.Flags().Bool("resume", false, "Whether to resume a paused release.")
 	ringReleaseCmd.Flags().Bool("cancel", false, "Whether to cancel a release.")
+	ringReleaseCmd.Flags().StringArray("env-variable", []string{}, "Additional environment variables for the installation group release. Accepts multiple values, for example: '... --env-variable TEST_NAME:TEST_VALUE --env-variable TEST_NAME_2:TEST_VALUE_2'")
 
 	ringReleaseGetCmd.Flags().String("release", "", "The id of the release to return info.")
 	ringReleaseGetCmd.MarkFlagRequired("release") //nolint
@@ -220,11 +221,13 @@ var ringReleaseCmd = &cobra.Command{
 		pauseRelease, _ := command.Flags().GetBool("pause")
 		resumeRelease, _ := command.Flags().GetBool("resume")
 		cancelRelease, _ := command.Flags().GetBool("cancel")
+		envVariables, _ := command.Flags().GetStringArray("env-variable")
 
 		request := &model.RingReleaseRequest{
-			Image:   image,
-			Version: version,
-			Force:   force,
+			Image:        image,
+			Version:      version,
+			Force:        force,
+			EnvVariables: strings.Join(envVariables, ","),
 		}
 
 		dryRun, _ := command.Flags().GetBool("dry-run")

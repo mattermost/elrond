@@ -132,10 +132,11 @@ func handleCreateRing(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	release, err := c.Store.GetOrCreateRingRelease(&model.RingRelease{
-		Version:  createRingRequest.Version,
-		Image:    createRingRequest.Image,
-		Force:    false,
-		CreateAt: time.Now().UnixNano(),
+		Version:      createRingRequest.Version,
+		Image:        createRingRequest.Image,
+		Force:        false,
+		EnvVariables: "",
+		CreateAt:     time.Now().UnixNano(),
 	})
 
 	if err != nil {
@@ -344,10 +345,11 @@ func handleReleaseAllRings(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	ringRelease := model.RingRelease{
-		Version:  ringReleaseRequest.Version,
-		Image:    ringReleaseRequest.Image,
-		Force:    ringReleaseRequest.Force,
-		CreateAt: time.Now().UnixNano(),
+		Version:      ringReleaseRequest.Version,
+		Image:        ringReleaseRequest.Image,
+		Force:        ringReleaseRequest.Force,
+		EnvVariables: ringReleaseRequest.EnvVariables,
+		CreateAt:     time.Now().UnixNano(),
 	}
 
 	//Proactively checking or creating a ring release entry so that all rings to be released get the same release version
@@ -466,13 +468,14 @@ func handleReleaseRing(c *Context, w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if activeRelease.Image != ringReleaseRequest.Image || activeRelease.Version != ringReleaseRequest.Version {
+		if activeRelease.Image != ringReleaseRequest.Image || activeRelease.Version != ringReleaseRequest.Version || activeRelease.EnvVariables != ringReleaseRequest.EnvVariables {
 
 			ringRelease := model.RingRelease{
-				Version:  ringReleaseRequest.Version,
-				Image:    ringReleaseRequest.Image,
-				Force:    ringReleaseRequest.Force,
-				CreateAt: time.Now().UnixNano(),
+				Version:      ringReleaseRequest.Version,
+				Image:        ringReleaseRequest.Image,
+				Force:        ringReleaseRequest.Force,
+				EnvVariables: ringReleaseRequest.EnvVariables,
+				CreateAt:     time.Now().UnixNano(),
 			}
 
 			desiredRelease, err := c.Store.GetOrCreateRingRelease(&ringRelease)
