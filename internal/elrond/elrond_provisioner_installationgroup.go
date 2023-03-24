@@ -28,10 +28,12 @@ func (provisioner *ElProvisioner) ReleaseInstallationGroup(installationGroup *mo
 	}
 
 	mattermostEnv := make(cmodel.EnvVarMap)
-	for _, envVar := range strings.Split(envVariables, ",") {
-		envVarName := strings.Split(envVar, ":")[0]
-		envVarValue := strings.Split(envVar, ":")[1]
-		mattermostEnv[envVarName] = cmodel.EnvVar{Value: envVarValue, ValueFrom: nil}
+	if envVariables != "" {
+		for _, envVar := range strings.Split(envVariables, ",") {
+			envVarName := strings.Split(envVar, ":")[0]
+			envVarValue := strings.Split(envVar, ":")[1]
+			mattermostEnv[envVarName] = cmodel.EnvVar{Value: envVarValue, ValueFrom: nil}
+		}
 	}
 
 	if group.Image != image || group.Version != version || checkChangeGroupEnvVariables(group.MattermostEnv, mattermostEnv) {
