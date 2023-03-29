@@ -34,6 +34,8 @@ func (provisioner *ElProvisioner) ReleaseInstallationGroup(installationGroup *mo
 			envVarValue := strings.Split(envVar, ":")[1]
 			mattermostEnv[envVarName] = cmodel.EnvVar{Value: envVarValue, ValueFrom: nil}
 		}
+	} else {
+		mattermostEnv = group.MattermostEnv
 	}
 
 	if group.Image != image || group.Version != version || checkChangeGroupEnvVariables(group.MattermostEnv, mattermostEnv) {
@@ -97,13 +99,13 @@ func (provisioner *ElProvisioner) SoakInstallationGroup(installationGroup *model
 	return nil
 }
 
-func checkChangeGroupEnvVariables(group1, group2 cmodel.EnvVarMap) bool {
-	if len(group1) != len(group2) {
+func checkChangeGroupEnvVariables(oldGroup, newGroup cmodel.EnvVarMap) bool {
+	if len(oldGroup) != len(newGroup) {
 		logger.Info("There is a difference in the number of env variables in the two groups. Probably a new env variable is added...")
 		return true
 	}
-	for i, envVar1 := range group1 {
-		for j, envVar2 := range group2 {
+	for i, envVar1 := range oldGroup {
+		for j, envVar2 := range newGroup {
 			if i == j {
 				if envVar1.Value != envVar2.Value {
 					logger.Infof("Env var %s has changed from %s to %s", i, envVar1.Value, envVar2.Value)
