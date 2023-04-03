@@ -479,7 +479,6 @@ func handleReleaseRing(c *Context, w http.ResponseWriter, r *http.Request) {
 			}
 
 			desiredRelease, err := c.Store.GetOrCreateRingRelease(&ringRelease)
-			c.Logger.Info(desiredRelease.ID)
 			if err != nil {
 				c.Logger.WithError(err).Error("failed to get or create new ring release")
 				w.WriteHeader(http.StatusInternalServerError)
