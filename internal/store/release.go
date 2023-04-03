@@ -112,9 +112,8 @@ func (sqlStore *SQLStore) getOrCreateRingRelease(db execer, ringRelease *model.R
 				return nil, errors.Wrap(err, "failed to create ring release")
 			}
 			return ringRelease, nil
-		} else {
-			return nil, errors.Wrap(err, "failed to get ring release by image and version")
 		}
+		return nil, errors.Wrap(err, "failed to get ring release by image and version")
 	}
 
 	return rawRingReleaseOutput.toRingRelease()
