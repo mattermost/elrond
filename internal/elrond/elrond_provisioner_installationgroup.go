@@ -5,7 +5,6 @@
 package elrond
 
 import (
-	"strings"
 	"time"
 
 	"github.com/mattermost/elrond/model"
@@ -14,7 +13,7 @@ import (
 )
 
 // ReleaseInstallationGroup releases an installation group ring.
-func (provisioner *ElProvisioner) ReleaseInstallationGroup(installationGroup *model.InstallationGroup, image, version, envVariables string) error {
+func (provisioner *ElProvisioner) ReleaseInstallationGroup(installationGroup *model.InstallationGroup, release *model.RingRelease) error {
 	logger := provisioner.logger.WithField("installationgroup", installationGroup.ID)
 	logger.Infof("Releasing installation group %s", installationGroup.ID)
 
@@ -27,24 +26,22 @@ func (provisioner *ElProvisioner) ReleaseInstallationGroup(installationGroup *mo
 		return errors.Wrapf(err, "failed to get group %s, make sure it exists", installationGroup.ProvisionerGroupID)
 	}
 
-	mattermostEnv := make(cmodel.EnvVarMap)
-	if envVariables != "" {
-		for _, envVar := range strings.Split(envVariables, ",") {
-			envVarName := strings.Split(envVar, ":")[0]
-			envVarValue := strings.Split(envVar, ":")[1]
-			mattermostEnv[envVarName] = cmodel.EnvVar{Value: envVarValue, ValueFrom: nil}
-		}
-	} else {
-		mattermostEnv = group.MattermostEnv
+	newEnvVars, err := release.EnvVariables.ToJSON()
+	if err != nil {
+		return errors.Wrap(err, "failed to create newEnvVars JSON")
 	}
 
-	if group.Image != image || group.Version != version || checkChangeGroupEnvVariables(group.MattermostEnv, mattermostEnv) {
-		logger.Infof("Image or group env variable changes were detected. Current provisioner group image is %s:%s and new image is %s:%s", group.Image, group.Version, image, version)
+	if string(newEnvVars) == "{}" {
+		release.EnvVariables = group.MattermostEnv
+	}
+
+	if group.Image != release.Image || group.Version != release.Version || checkChangeGroupEnvVariables(group.MattermostEnv, release.EnvVariables) {
+		logger.Infof("Image or group env variable changes were detected. Current provisioner group image is %s:%s and new image is %s:%s", group.Image, group.Version, release.Image, release.Version)
 		request := &cmodel.PatchGroupRequest{
 			ID:            installationGroup.ProvisionerGroupID,
-			Version:       &version,
-			Image:         &image,
-			MattermostEnv: mattermostEnv,
+			Version:       &release.Version,
+			Image:         &release.Image,
+			MattermostEnv: release.EnvVariables,
 		}
 
 		logger.Infof("Updating provisioner group %s", installationGroup.ProvisionerGroupID)

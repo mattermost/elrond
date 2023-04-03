@@ -167,4 +167,46 @@ var migrations = []migration{
 		}
 		return nil
 	}},
+	{semver.MustParse("0.2.0"), semver.MustParse("0.3.0"), func(e execer) error {
+		_, err := e.Exec(`ALTER TABLE RingRelease RENAME TO RingReleaseTemp;`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`
+				CREATE TABLE RingRelease (
+					ID TEXT PRIMARY KEY,
+					Image TEXT NOT NULL,
+					Version TEXT NOT NULL,
+					EnvVariables BYTEA NULL, 
+					CreateAt BIGINT NOT NULL,
+					Force BOOLEAN NOT NULL
+				);
+			`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`
+				INSERT INTO RingRelease
+				SELECT
+					ID,
+					Image,
+					Version,
+					NULL,
+					CreateAt,
+					Force
+				FROM
+				RingReleaseTemp;
+			`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`DROP TABLE RingReleaseTemp;`)
+		if err != nil {
+			return err
+		}
+		return nil
+	}},
 }

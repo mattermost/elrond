@@ -135,7 +135,7 @@ func handleCreateRing(c *Context, w http.ResponseWriter, r *http.Request) {
 		Version:      createRingRequest.Version,
 		Image:        createRingRequest.Image,
 		Force:        false,
-		EnvVariables: "",
+		EnvVariables: nil,
 		CreateAt:     time.Now().UnixNano(),
 	})
 
@@ -468,7 +468,7 @@ func handleReleaseRing(c *Context, w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if activeRelease.Image != ringReleaseRequest.Image || activeRelease.Version != ringReleaseRequest.Version || activeRelease.EnvVariables != ringReleaseRequest.EnvVariables {
+		if activeRelease.Image != ringReleaseRequest.Image || activeRelease.Version != ringReleaseRequest.Version || ringReleaseRequest.EnvVariables != nil {
 
 			ringRelease := model.RingRelease{
 				Version:      ringReleaseRequest.Version,
@@ -479,6 +479,7 @@ func handleReleaseRing(c *Context, w http.ResponseWriter, r *http.Request) {
 			}
 
 			desiredRelease, err := c.Store.GetOrCreateRingRelease(&ringRelease)
+			c.Logger.Info(desiredRelease.ID)
 			if err != nil {
 				c.Logger.WithError(err).Error("failed to get or create new ring release")
 				w.WriteHeader(http.StatusInternalServerError)

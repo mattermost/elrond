@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"strconv"
 
+	cmodel "github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 )
 
@@ -39,7 +40,7 @@ type RingReleaseRequest struct {
 	Image        string
 	Version      string
 	Force        bool
-	EnvVariables string
+	EnvVariables cmodel.EnvVarMap
 }
 
 // GetRingsRequest describes the parameters to request a list of rings.
