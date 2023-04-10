@@ -18,6 +18,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/mattermost/elrond/model"
+	cmodel "github.com/mattermost/mattermost-cloud/model"
 )
 
 func init() {
@@ -223,11 +224,22 @@ var ringReleaseCmd = &cobra.Command{
 		cancelRelease, _ := command.Flags().GetBool("cancel")
 		envVariables, _ := command.Flags().GetStringArray("env-variable")
 
+		mattermostEnvVariables := make(cmodel.EnvVarMap)
+		if len(envVariables) > 0 {
+			for _, envVar := range envVariables {
+				if len(strings.Split(envVar, ":")) != 2 {
+					return errors.Errorf("Provided environment variable %s not following the pattern ENV_VAR_NAME:ENV_VAR_VALUE", envVar)
+				}
+				envVarName := strings.Split(envVar, ":")[0]
+				envVarValue := strings.Split(envVar, ":")[1]
+				mattermostEnvVariables[envVarName] = cmodel.EnvVar{Value: envVarValue, ValueFrom: nil}
+			}
+		}
 		request := &model.RingReleaseRequest{
 			Image:        image,
 			Version:      version,
 			Force:        force,
-			EnvVariables: strings.Join(envVariables, ","),
+			EnvVariables: mattermostEnvVariables,
 		}
 
 		dryRun, _ := command.Flags().GetBool("dry-run")

@@ -30,7 +30,7 @@ type installationGroupStore interface {
 
 // installationGroupProvisioner abstracts the provisioning operations required by the installation group supervisor.
 type installationGroupProvisioner interface {
-	ReleaseInstallationGroup(installationGroup *model.InstallationGroup, image, version, envVariables string) error
+	ReleaseInstallationGroup(installationGroup *model.InstallationGroup, release *model.RingRelease) error
 	SoakInstallationGroup(installationGroup *model.InstallationGroup) error
 }
 
@@ -226,7 +226,7 @@ func (s *InstallationGroupSupervisor) releaseInstallationGroup(installationGroup
 		return model.InstallationGroupReleaseFailed
 	}
 
-	err = s.provisioner.ReleaseInstallationGroup(installationGroup, release.Image, release.Version, release.EnvVariables)
+	err = s.provisioner.ReleaseInstallationGroup(installationGroup, release)
 	if err != nil {
 		logger.WithError(err).Error("Failed to release installation group")
 		return model.InstallationGroupReleaseFailed

@@ -7,6 +7,8 @@ package model
 import (
 	"encoding/json"
 	"io"
+
+	cmodel "github.com/mattermost/mattermost-cloud/model"
 )
 
 // Ring represents a deployment ring.
@@ -33,7 +35,7 @@ type RingRelease struct {
 	ID           string
 	Image        string
 	Version      string
-	EnvVariables string
+	EnvVariables cmodel.EnvVarMap
 	CreateAt     int64
 	Force        bool
 }
