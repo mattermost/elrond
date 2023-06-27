@@ -41,6 +41,8 @@ func init() {
 	serverCmd.PersistentFlags().Bool("machine-readable-logs", false, "Output the logs in machine readable format.")
 	serverCmd.PersistentFlags().String("provisioner-server", "http://localhost:8075", "The provisioning server whose API will be queried.")
 	serverCmd.PersistentFlags().Int("provisioner-group-release-timeout", 3600, "The provisioner group release timeout")
+	serverCmd.PersistentFlags().String("grafana-token", "", "The Grafana token for the Grafana intergration.")
+	serverCmd.PersistentFlags().StringSlice("grafana-orgs", []string{""}, "The Grafana Orgs to integrate with")
 
 	// Supervisors
 	serverCmd.PersistentFlags().Int("poll", 30, "The interval in seconds to poll for background work.")
