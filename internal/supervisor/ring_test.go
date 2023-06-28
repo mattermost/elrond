@@ -6,6 +6,7 @@ package supervisor_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/mattermost/elrond/internal/store"
 	"github.com/mattermost/elrond/internal/supervisor"
@@ -174,9 +175,19 @@ func TestRingSupervisorSupervise(t *testing.T) {
 			sqlStore := store.MakeTestSQLStore(t, logger)
 			supervisor := supervisor.NewRingSupervisor(sqlStore, &mockRingProvisioner{}, "instanceID", logger)
 
+			release, err := sqlStore.GetOrCreateRingRelease(&model.RingRelease{
+				Version:      "test-version",
+				Image:        "test-image",
+				Force:        false,
+				EnvVariables: nil,
+				CreateAt:     time.Now().UnixNano(),
+			})
+			require.NoError(t, err)
+
 			Ring := &model.Ring{
-				State:           tc.InitialState,
-				ActiveReleaseID: "active-release-id",
+				State:            tc.InitialState,
+				ActiveReleaseID:  release.ID,
+				DesiredReleaseID: release.ID,
 			}
 
 			installationGroup := model.InstallationGroup{
@@ -184,7 +195,42 @@ func TestRingSupervisorSupervise(t *testing.T) {
 				State: model.InstallationGroupStable,
 			}
 
-			err := sqlStore.CreateRing(Ring, &installationGroup)
+			err = sqlStore.CreateRing(Ring, &installationGroup)
+			require.NoError(t, err)
+
+			supervisor.Supervise(Ring)
+
+			Ring, err = sqlStore.GetRing(Ring.ID)
+			require.NoError(t, err)
+			require.Equal(t, tc.ExpectedState, Ring.State)
+		})
+
+		t.Run(tc.Description, func(t *testing.T) {
+			logger := testlib.MakeLogger(t)
+			sqlStore := store.MakeTestSQLStore(t, logger)
+			supervisor := supervisor.NewRingSupervisor(sqlStore, &mockRingProvisioner{}, "instanceID", logger)
+
+			release, err := sqlStore.GetOrCreateRingRelease(&model.RingRelease{
+				Version:      "test-version",
+				Image:        "test-image",
+				Force:        true,
+				EnvVariables: nil,
+				CreateAt:     time.Now().UnixNano(),
+			})
+			require.NoError(t, err)
+
+			Ring := &model.Ring{
+				State:            tc.InitialState,
+				ActiveReleaseID:  release.ID,
+				DesiredReleaseID: release.ID,
+			}
+
+			installationGroup := model.InstallationGroup{
+				Name:  "group1",
+				State: model.InstallationGroupStable,
+			}
+
+			err = sqlStore.CreateRing(Ring, &installationGroup)
 			require.NoError(t, err)
 
 			supervisor.Supervise(Ring)
