@@ -234,37 +234,47 @@ func (s *RingSupervisor) releaseRing(ring *model.Ring, logger log.FieldLogger) s
 }
 
 func (s *RingSupervisor) checkRingReleasePending(ring *model.Ring, logger log.FieldLogger) string {
-	logger.Debug("Checking if other Rings are locked...")
+	logger.Debugf("Checking if pending ring release should be forced...")
 
-	ringsLocked, err := s.store.GetRingsLocked()
+	release, err := s.store.GetRingRelease(ring.DesiredReleaseID)
 	if err != nil {
-		logger.WithError(err).Error("Failed to query for rings that are under lock")
+		logger.WithError(err).Error("Failed to get the ring release for the ring pending work")
 		return model.RingStateReleaseFailed
 	}
 
-	ringsReleaseInProgress, err := s.store.GetRingsReleaseInProgress()
-	if err != nil {
-		logger.WithError(err).Error("Failed to query for rings that are under release")
-		return model.RingStateReleaseFailed
-	}
+	if !release.Force {
+		logger.Debug("Checking if other Rings are locked...")
 
-	//The total rings locked at this time will be at least 1
-	if len(ringsLocked) > 1 || len(ringsReleaseInProgress) > 0 {
-		logger.Debug("Another ring is under lock and being updated...")
-		return model.InstallationGroupReleasePending
-	}
+		ringsLocked, err := s.store.GetRingsLocked()
+		if err != nil {
+			logger.WithError(err).Error("Failed to query for rings that are under lock")
+			return model.RingStateReleaseFailed
+		}
 
-	logger.Debugf("Checking ring %s prioritization", ring.ID)
-	rings, err := s.store.GetUnlockedRingsPendingWork()
-	if err != nil {
-		logger.WithError(err).Error("Failed to get rings pending work for prioritization check")
-		return model.RingStateReleaseFailed
-	}
+		ringsReleaseInProgress, err := s.store.GetRingsReleaseInProgress()
+		if err != nil {
+			logger.WithError(err).Error("Failed to query for rings that are under release")
+			return model.RingStateReleaseFailed
+		}
 
-	for _, rg := range rings {
-		if rg.Priority < ring.Priority {
-			logger.Debugf("Ring %s is in priority", rg.ID)
-			return model.RingStateReleasePending
+		//The total rings locked at this time will be at least 1
+		if len(ringsLocked) > 1 || len(ringsReleaseInProgress) > 0 {
+			logger.Debug("Another ring is under lock and being updated...")
+			return model.InstallationGroupReleasePending
+		}
+
+		logger.Debugf("Checking ring %s prioritization", ring.ID)
+		rings, err := s.store.GetUnlockedRingsPendingWork()
+		if err != nil {
+			logger.WithError(err).Error("Failed to get rings pending work for prioritization check")
+			return model.RingStateReleaseFailed
+		}
+
+		for _, rg := range rings {
+			if rg.Priority < ring.Priority {
+				logger.Debugf("Ring %s is in priority", rg.ID)
+				return model.RingStateReleasePending
+			}
 		}
 	}
 
