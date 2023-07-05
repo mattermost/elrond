@@ -41,8 +41,8 @@ func init() {
 	serverCmd.PersistentFlags().Bool("machine-readable-logs", false, "Output the logs in machine readable format.")
 	serverCmd.PersistentFlags().String("provisioner-server", "http://localhost:8075", "The provisioning server whose API will be queried.")
 	serverCmd.PersistentFlags().Int("provisioner-group-release-timeout", 3600, "The provisioner group release timeout")
-	serverCmd.PersistentFlags().String("grafana-token", "", "The Grafana token for the Grafana intergration.")
-	serverCmd.PersistentFlags().StringSlice("grafana-orgs", []string{""}, "The Grafana Orgs to integrate with")
+	serverCmd.PersistentFlags().String("grafana-url", "", "The Grafana url for the Grafana intergration.")
+	serverCmd.PersistentFlags().StringSlice("grafana-token", []string{""}, "The grafana token registered with Grafana Org. You can pass multiple entries.")
 
 	// Supervisors
 	serverCmd.PersistentFlags().Int("poll", 30, "The interval in seconds to poll for background work.")
@@ -89,6 +89,16 @@ var serverCmd = &cobra.Command{
 			return errors.Errorf("server requires at least schema %s, current is %s", serverVersion, currentVersion)
 		}
 
+		grafanaURL, _ := command.Flags().GetString("grafana-url")
+		if len(grafanaURL) == 0 {
+			logger.Warn("The grafana-url flag was empty; no Grafana integration configured")
+		}
+
+		grafanaTokens, _ := command.Flags().GetStringSlice("grafana-token")
+		if len(grafanaTokens) == 0 {
+			logger.Warn("The grafana-tokens flag was empty; no Grafana integration configured")
+		}
+
 		ringSupervisor, _ := command.Flags().GetBool("ring-supervisor")
 		installationGroupSupervisor, _ := command.Flags().GetBool("installationgroup-supervisor")
 		if !ringSupervisor && !installationGroupSupervisor {
@@ -113,6 +123,8 @@ var serverCmd = &cobra.Command{
 
 		provisioningParams := elrond.ProvisioningParams{
 			ProvisionerGroupReleaseTimeout: provisionerGroupReleaseTimeout,
+			GrafanaURL:                     grafanaURL,
+			GrafanaTokens:                  grafanaTokens,
 		}
 
 		// Setup the provisioner.
