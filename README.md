@@ -50,6 +50,10 @@ elrond server
 ```
 tip: if you want to use a remote running Mattermost Cloud server pass the `--provisioner-server` flag
 
+#### Grafana Integration
+
+In case you want to integrate Elrond with Grafana, Elrond supports creation of Grafana annotations covering start and finish of an ring release. You can enable the feature by passing `--grafana-token` and `--grafana-url` flags. You can pass multiple `--grafana-token` flags to add annotations in multiple Grafana orgs. 
+
 
 #### Ring
 The ring reflects a group of Installation Groups that have a similar release purpose. Therefore a ring can have many registered Installation Groups. A number of registered installation groups higher than 1 can help to achieve canary releases. 

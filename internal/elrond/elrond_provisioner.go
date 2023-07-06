@@ -11,6 +11,8 @@ import (
 // ProvisioningParams represent configuration used during various provisioning operations.
 type ProvisioningParams struct {
 	ProvisionerGroupReleaseTimeout int
+	GrafanaURL                     string
+	GrafanaTokens                  []string
 }
 
 // ElProvisioner provisions release rings.

@@ -5,6 +5,7 @@
 package supervisor
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/mattermost/elrond/internal/webhook"
@@ -32,6 +33,7 @@ type installationGroupStore interface {
 type installationGroupProvisioner interface {
 	ReleaseInstallationGroup(installationGroup *model.InstallationGroup, release *model.RingRelease) error
 	SoakInstallationGroup(installationGroup *model.InstallationGroup) error
+	AddGrafanaAnnotations(text string, ring *model.Ring, installationGroup *model.InstallationGroup, release *model.RingRelease) error
 }
 
 // InstallationGroupSupervisor finds installation groups pending work and effects the required changes.
@@ -226,6 +228,12 @@ func (s *InstallationGroupSupervisor) releaseInstallationGroup(installationGroup
 		return model.InstallationGroupReleaseFailed
 	}
 
+	err = s.provisioner.AddGrafanaAnnotations(fmt.Sprintf("Initiating release for ring %s and installation group %s", ring.Name, installationGroup.ProvisionerGroupID), ring, installationGroup, release)
+	if err != nil {
+		logger.WithError(err).Error("Failed to add release Grafana Annotations")
+		return model.InstallationGroupReleaseFailed
+	}
+
 	err = s.provisioner.ReleaseInstallationGroup(installationGroup, release)
 	if err != nil {
 		logger.WithError(err).Error("Failed to release installation group")
@@ -253,5 +261,24 @@ func (s *InstallationGroupSupervisor) soakInstallationGroup(installationGroup *m
 	}
 
 	logger.Info("Finished soaking installation group")
+
+	ring, err := s.store.GetRingFromInstallationGroupID(installationGroup.ID)
+	if err != nil {
+		logger.WithError(err).Error("Failed to get the ring from the installation group pending work")
+		return model.InstallationGroupReleaseFailed
+	}
+
+	release, err := s.store.GetRingRelease(ring.DesiredReleaseID)
+	if err != nil {
+		logger.WithError(err).Error("Failed to get the ring release for the installation group pending work")
+		return model.InstallationGroupReleaseFailed
+	}
+
+	err = s.provisioner.AddGrafanaAnnotations(fmt.Sprintf("Release for ring %s and installation group %s is complete", ring.Name, installationGroup.ProvisionerGroupID), ring, installationGroup, release)
+	if err != nil {
+		logger.WithError(err).Error("Failed to add release Grafana Annotations")
+		return model.InstallationGroupReleaseFailed
+	}
+
 	return model.InstallationGroupStable
 }
