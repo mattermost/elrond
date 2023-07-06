@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// AddGrafanaAnnotations adds annotations via the Grafana API
 func (provisioner *ElProvisioner) AddGrafanaAnnotations(text string, ring *model.Ring, installationGroup *model.InstallationGroup, release *model.RingRelease) error {
 	if provisioner.params.GrafanaURL != "" && len(provisioner.params.GrafanaTokens) > 0 {
 		logger := provisioner.logger.WithField("installationgroup", installationGroup.ID)
