@@ -242,6 +242,12 @@ func (s *InstallationGroupSupervisor) releaseInstallationGroup(installationGroup
 	logger.Infof("Finished releasing installation group %s", installationGroup.ID)
 	if release.Force {
 		logger.Info("This is a forced release. Skipping installation group soaking time...")
+
+		err = s.provisioner.AddGrafanaAnnotations(fmt.Sprintf("Release for ring %s and installation group %s is complete", ring.Name, installationGroup.ProvisionerGroupID), ring, installationGroup, release)
+		if err != nil {
+			logger.WithError(err).Error("Failed to add release Grafana Annotations")
+			return model.InstallationGroupReleaseFailed
+		}
 		return model.InstallationGroupStable
 	}
 	return model.InstallationGroupReleaseSoakingRequested
