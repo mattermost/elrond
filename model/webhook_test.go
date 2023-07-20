@@ -31,12 +31,13 @@ func TestWebhookPayloadToJSON(t *testing.T) {
 	payload := &WebhookPayload{
 		Timestamp: 123456789,
 		ID:        "id",
+		Name:      "professional",
 		Type:      "type",
 		NewState:  "state1",
 		OldState:  "state2",
 	}
 
-	expectedStr := `{"timestamp":123456789,"id":"id","type":"type","new_state":"state1","old_state":"state2"}`
+	expectedStr := `{"timestamp":123456789,"id":"id","name":"professional","type":"type","new_state":"state1","old_state":"state2"}`
 
 	payloadStr, err := payload.ToJSON()
 	require.NoError(t, err)
