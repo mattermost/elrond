@@ -35,6 +35,7 @@ type WebhookFilter struct {
 type WebhookPayload struct {
 	Timestamp int64             `json:"timestamp"`
 	ID        string            `json:"id"`
+	Name      string            `json:"name"`
 	Type      string            `json:"type"`
 	NewState  string            `json:"new_state"`
 	OldState  string            `json:"old_state"`

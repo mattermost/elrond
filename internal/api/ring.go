@@ -178,6 +178,7 @@ func handleCreateRing(c *Context, w http.ResponseWriter, r *http.Request) {
 	webhookPayload := &model.WebhookPayload{
 		Type:      model.TypeRing,
 		ID:        ring.ID,
+		Name:      ring.Name,
 		NewState:  model.RingStateCreationRequested,
 		OldState:  "n/a",
 		Timestamp: time.Now().UnixNano(),
@@ -219,6 +220,7 @@ func handleRetryCreateRing(c *Context, w http.ResponseWriter, r *http.Request) {
 		webhookPayload := &model.WebhookPayload{
 			Type:      model.TypeRing,
 			ID:        ring.ID,
+			Name:      ring.Name,
 			NewState:  newState,
 			OldState:  ring.State,
 			Timestamp: time.Now().UnixNano(),
@@ -377,6 +379,7 @@ func handleReleaseAllRings(c *Context, w http.ResponseWriter, r *http.Request) {
 			webhookPayload := &model.WebhookPayload{
 				Type:      model.TypeRing,
 				ID:        ring.ID,
+				Name:      ring.Name,
 				NewState:  model.RingStateReleasePending,
 				OldState:  ring.State,
 				Timestamp: time.Now().UnixNano(),
@@ -455,6 +458,7 @@ func handleReleaseRing(c *Context, w http.ResponseWriter, r *http.Request) {
 		webhookPayload := &model.WebhookPayload{
 			Type:      model.TypeRing,
 			ID:        ring.ID,
+			Name:      ring.Name,
 			NewState:  model.RingStateReleasePending,
 			OldState:  ring.State,
 			Timestamp: time.Now().UnixNano(),
@@ -535,6 +539,7 @@ func handleRetryReleaseRing(c *Context, w http.ResponseWriter, r *http.Request) 
 		webhookPayload := &model.WebhookPayload{
 			Type:      model.TypeRing,
 			ID:        ring.ID,
+			Name:      ring.Name,
 			NewState:  newState,
 			OldState:  ring.State,
 			Timestamp: time.Now().UnixNano(),
@@ -685,6 +690,7 @@ func handleDeleteRing(c *Context, w http.ResponseWriter, r *http.Request) {
 		webhookPayload := &model.WebhookPayload{
 			Type:      model.TypeRing,
 			ID:        ring.ID,
+			Name:      ring.Name,
 			NewState:  newState,
 			OldState:  ring.State,
 			Timestamp: time.Now().UnixNano(),
