@@ -2,6 +2,8 @@ module github.com/mattermost/elrond
 
 go 1.18
 
+exclude github.com/mattn/go-sqlite3 v2.0.3+incompatible
+
 require (
 	github.com/Masterminds/squirrel v1.5.2
 	github.com/blang/semver v3.5.1+incompatible
@@ -11,7 +13,7 @@ require (
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/lib/pq v1.10.5
 	github.com/mattermost/mattermost-cloud v0.57.0
-	github.com/mattn/go-sqlite3 v2.0.3+incompatible
+	github.com/mattn/go-sqlite3 v1.14.7
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/pborman/uuid v1.2.1
 	github.com/pkg/errors v0.9.1
