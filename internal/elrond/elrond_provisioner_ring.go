@@ -62,9 +62,11 @@ func (provisioner *ElProvisioner) RollBackRing(ring *model.Ring) error {
 func (provisioner *ElProvisioner) SoakRing(ring *model.Ring) error {
 	logger := provisioner.logger.WithField("ring", ring.ID)
 	logger.Infof("Soaking ring %s", ring.ID)
-	// err := soakRing(provisioner, ring, logger)
-	// if err != nil {
-	// 	return err
-	// }
+	if len(provisioner.params.ThanosURL) != 0 {
+		err := checkSLOs(ring, provisioner.params.ThanosURL, logger)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }

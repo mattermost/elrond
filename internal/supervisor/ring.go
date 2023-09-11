@@ -343,16 +343,24 @@ func (s *RingSupervisor) checkReleaseProgress(ring *model.Ring, logger log.Field
 
 func (s *RingSupervisor) soakRing(ring *model.Ring, logger log.FieldLogger) string {
 
+	installationGroups, err := s.store.GetInstallationGroupsForRing(ring.ID)
+	if err != nil {
+		logger.WithError(err).Error("failed to get installation groups for ring")
+		return model.RingStateSoakingFailed
+	}
+	ring.InstallationGroups = installationGroups
+
 	timePassed := ((time.Now().UnixNano() - ring.ReleaseAt) / int64(time.Second))
 	if timePassed < int64(ring.SoakTime) {
 		logger.Infof("Ring %s will be soaking for another %d seconds...", ring.ID, int64(ring.SoakTime)-timePassed)
+		err := s.provisioner.SoakRing(ring)
+		if err != nil {
+			logger.WithError(err).Error("Failed to soak ring")
+			return model.RingStateSoakingFailed
+		}
+		logger.Info("Sleeping for 30 seconds before next check...")
+		time.Sleep(30 * time.Second)
 		return model.RingStateSoakingRequested
-	}
-
-	err := s.provisioner.SoakRing(ring)
-	if err != nil {
-		logger.WithError(err).Error("Failed to soak ring")
-		return model.RingStateSoakingFailed
 	}
 
 	logger.Infof("Finished soaking ring %s", ring.ID)
@@ -360,7 +368,7 @@ func (s *RingSupervisor) soakRing(ring *model.Ring, logger log.FieldLogger) stri
 
 	ring.ActiveReleaseID = ring.DesiredReleaseID
 
-	if err = s.store.UpdateRing(ring); err != nil {
+	if err := s.store.UpdateRing(ring); err != nil {
 		logger.WithError(err).Error("Failed to record updated ring version and image")
 		return model.RingStateSoakingFailed
 	}

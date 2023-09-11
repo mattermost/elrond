@@ -43,6 +43,7 @@ func init() {
 	serverCmd.PersistentFlags().Int("provisioner-group-release-timeout", 3600, "The provisioner group release timeout")
 	serverCmd.PersistentFlags().String("grafana-url", "", "The Grafana url for the Grafana intergration.")
 	serverCmd.PersistentFlags().StringSlice("grafana-token", []string{""}, "The grafana token registered with Grafana Org. You can pass multiple entries.")
+	serverCmd.PersistentFlags().String("thanos-url", "", "The Thanos url for the SLO checks while Soaking. If not added SLO metric checks are ignored")
 
 	// Supervisors
 	serverCmd.PersistentFlags().Int("poll", 30, "The interval in seconds to poll for background work.")
@@ -99,6 +100,11 @@ var serverCmd = &cobra.Command{
 			logger.Warn("The grafana-tokens flag was empty; no Grafana integration configured")
 		}
 
+		thanosURL, _ := command.Flags().GetString("thanos-url")
+		if len(thanosURL) == 0 {
+			logger.Warn("The thanos-url flag was empty; no Thanos integration configured for SLO checks during Soak time")
+		}
+
 		ringSupervisor, _ := command.Flags().GetBool("ring-supervisor")
 		installationGroupSupervisor, _ := command.Flags().GetBool("installationgroup-supervisor")
 		if !ringSupervisor && !installationGroupSupervisor {
@@ -125,6 +131,7 @@ var serverCmd = &cobra.Command{
 			ProvisionerGroupReleaseTimeout: provisionerGroupReleaseTimeout,
 			GrafanaURL:                     grafanaURL,
 			GrafanaTokens:                  grafanaTokens,
+			ThanosURL:                      thanosURL,
 		}
 
 		// Setup the provisioner.
