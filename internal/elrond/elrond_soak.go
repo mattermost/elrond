@@ -16,6 +16,10 @@ import (
 
 func checkSLOs(ring *model.Ring, thanosURL string, logger *logrus.Entry) error {
 	results, err := querySLOMetrics(ring, thanosURL, time.Now(), logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to query thanos")
+	}
+
 	for _, result := range results {
 		if len(result) > 0 {
 			for _, rawMetric := range result {
@@ -30,9 +34,6 @@ func checkSLOs(ring *model.Ring, thanosURL string, logger *logrus.Entry) error {
 		}
 	}
 
-	if err != nil {
-		return errors.Wrap(err, "failed to query thanos")
-	}
 	return nil
 }
 
