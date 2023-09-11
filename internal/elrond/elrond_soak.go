@@ -23,8 +23,8 @@ func checkSLOs(ring *model.Ring, thanosURL string, logger *logrus.Entry) error {
 	for _, result := range results {
 		if len(result) > 0 {
 			for _, rawMetric := range result {
-				sloService, ok := rawMetric.Metric["slo_service"]
-				if !ok {
+				sloService, exists := rawMetric.Metric["slo_service"]
+				if !exists {
 					continue
 				}
 				return errors.Errorf("SLO service %s is showing a high API error rate. Soaking failed, stopping release", sloService)
