@@ -13,6 +13,7 @@ type ProvisioningParams struct {
 	ProvisionerGroupReleaseTimeout int
 	GrafanaURL                     string
 	GrafanaTokens                  []string
+	ThanosURL                      string
 }
 
 // ElProvisioner provisions release rings.
