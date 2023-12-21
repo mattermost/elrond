@@ -1,12 +1,23 @@
 # Build the Mattermost Elrond
 ARG DOCKER_BUILD_IMAGE=golang:1.20
-ARG DOCKER_BASE_IMAGE=alpine:3.16.2
+ARG DOCKER_BASE_IMAGE=alpine:3.19
 
 FROM ${DOCKER_BUILD_IMAGE} AS build
 WORKDIR /elrond/
 COPY . /elrond/
+
+# Detect architecture and set ARCH
+RUN ARCH=$(uname -m) && \
+    if [ "$ARCH" = "x86_64" ]; then \
+        ARCH="amd64"; \
+    elif [ "$ARCH" = "aarch64" ]; then \
+        ARCH="arm64"; \
+    elif [ "$ARCH" = "armv7l" ] || [ "$ARCH" = "armv6l" ]; then \
+        ARCH="arm"; \
+    fi && \
+    echo "ARCH=$ARCH" && \
+    make build ARCH=$ARCH
 RUN apt-get update -yq && apt-get install -yq unzip
-RUN make build
 
 
 # Final Image
@@ -24,7 +35,7 @@ ENV ELROND=/elrond/elrond \
     USER_NAME=elrond
 
 RUN  apk update && apk add libc6-compat && apk add ca-certificates
-COPY --from=build /elrond/build/_output/bin/elrond /elrond/elrond
+COPY --from=build /elrond/cmd/elrond /elrond/elrond
 COPY --from=build /elrond/build/bin /usr/local/bin
 
 RUN  /usr/local/bin/user_setup

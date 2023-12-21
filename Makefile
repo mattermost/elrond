@@ -4,7 +4,7 @@
 
 ## Docker Build Versions
 DOCKER_BUILD_IMAGE = golang:1.20
-DOCKER_BASE_IMAGE = alpine:3.15.4
+DOCKER_BASE_IMAGE = alpine:3.19
 
 ################################################################################
 
@@ -64,15 +64,27 @@ binaries: ## Build binaries of elrond
 
 .PHONY: build
 build: ## Build the elrond
-	@echo Building Elrond
-	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 $(GO) build -ldflags '$(LDFLAGS)' -gcflags all=-trimpath=$(PWD) -asmflags all=-trimpath=$(PWD) -a -installsuffix cgo -o build/_output/bin/elrond  ./cmd/$(APP)
+	@echo Building Elrond for ARCH=$(ARCH)
+	@if [ "$(ARCH)" = "amd64" ]; then \
+		export GOARCH="amd64"; \
+	elif [ "$(ARCH)" = "arm64" ]; then \
+		export GOARCH="arm64"; \
+	elif [ "$(ARCH)" = "arm" ]; then \
+		export GOARCH="arm"; \
+	else \
+		echo "Unknown architecture $(ARCH)"; \
+		exit 1; \
+	fi; \
+	GOOS=linux CGO_ENABLED=0 $(GO) build -ldflags '$(LDFLAGS)' -gcflags all=-trimpath=$(PWD) -asmflags all=-trimpath=$(PWD) -a -installsuffix cgo -o build/_output/bin/elrond  ./cmd/$(APP)
 
 .PHONY: build-image
 build-image:  ## Build the docker image for Elrond
 	@echo Building Elrond Docker Image
-	: $${DOCKER_USERNAME:?}
-	: $${DOCKER_PASSWORD:?}
-	echo $(DOCKER_PASSWORD) | docker login --username $(DOCKER_USERNAME) --password-stdin
+	@if [ -z "$(DOCKER_USERNAME)" ] || [ -z "$(DOCKER_PASSWORD)" ]; then \
+		echo "DOCKER_USERNAME and/or DOCKER_PASSWORD not set. Skipping Docker login."; \
+	else \
+		echo $(DOCKER_PASSWORD) | docker login --username $(DOCKER_USERNAME) --password-stdin; \
+	fi
 	docker buildx build \
 	--platform linux/arm64,linux/amd64 \
 	--build-arg DOCKER_BUILD_IMAGE=$(DOCKER_BUILD_IMAGE) \
@@ -84,10 +96,12 @@ build-image:  ## Build the docker image for Elrond
 .PHONY: build-image-with-tag
 build-image-with-tag:  ## Build the docker image for elrond
 	@echo Building Elrond Docker Image
-	: $${DOCKER_USERNAME:?}
-	: $${DOCKER_PASSWORD:?}
+	@if [ -z "$(DOCKER_USERNAME)" ] || [ -z "$(DOCKER_PASSWORD)" ]; then \
+		echo "DOCKER_USERNAME and/or DOCKER_PASSWORD not set. Skipping Docker login."; \
+	else \
+		echo $(DOCKER_PASSWORD) | docker login --username $(DOCKER_USERNAME) --password-stdin; \
+	fi
 	: $${TAG:?}
-	echo $(DOCKER_PASSWORD) | docker login --username $(DOCKER_USERNAME) --password-stdin
 	docker buildx build \
 	--platform linux/arm64,linux/amd64 \
 	--build-arg DOCKER_BUILD_IMAGE=$(DOCKER_BUILD_IMAGE) \
