@@ -35,7 +35,7 @@ ENV ELROND=/elrond/elrond \
     USER_NAME=elrond
 
 RUN  apk update && apk add libc6-compat && apk add ca-certificates
-COPY --from=build /elrond/cmd/elrond /elrond/elrond
+COPY --from=build /elrond/build/_output/bin/elrond /elrond/elrond
 COPY --from=build /elrond/build/bin /usr/local/bin
 
 RUN  /usr/local/bin/user_setup
