@@ -49,6 +49,7 @@ func querySLOMetrics(ring *model.Ring, url string, queryTime time.Time, logger *
 	var results []pmodel.Vector
 	for _, installationGroup := range ring.InstallationGroups {
 		query := fmt.Sprintf("((slo:sli_error:ratio_rate5m{slo_service='%[1]s-ring-%[2]s'} > (14.4 * 0.005)) and ignoring(slo_window)(slo:sli_error:ratio_rate1h{slo_service='%[1]s-ring-%[2]s'} > (14.4 * 0.005))) or ignoring(slo_window)((slo:sli_error:ratio_rate30m{slo_service='%[1]s-ring-%[2]s'} > (6 * 0.005)) and ignoring(slo_window)(slo:sli_error:ratio_rate6h{slo_service='%[1]s-ring-%[2]s'} > (3.3 * 0.005)))", installationGroup.Name, installationGroup.ProvisionerGroupID)
+		logger.Infof("Running Thanos query %s", query)
 		result, warnings, err := v1api.Query(ctx, query, queryTime)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to query")
