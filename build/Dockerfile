@@ -2,26 +2,18 @@
 ARG DOCKER_BUILD_IMAGE=golang:1.20
 ARG DOCKER_BASE_IMAGE=alpine:3.19
 
-FROM ${DOCKER_BUILD_IMAGE} AS build
+FROM --platform=${TARGETPLATFORM} ${DOCKER_BUILD_IMAGE} AS build
+ARG TARGETARCH
 WORKDIR /elrond/
 COPY . /elrond/
+ENV ARCH=${TARGETARCH}
 
-# Detect architecture and set ARCH
-RUN ARCH=$(uname -m) && \
-    if [ "$ARCH" = "x86_64" ]; then \
-        ARCH="amd64"; \
-    elif [ "$ARCH" = "aarch64" ]; then \
-        ARCH="arm64"; \
-    elif [ "$ARCH" = "armv7l" ] || [ "$ARCH" = "armv6l" ]; then \
-        ARCH="arm"; \
-    fi && \
-    echo "ARCH=$ARCH" && \
-    make build ARCH=$ARCH
+RUN make build ARCH=${ARCH}
 RUN apt-get update -yq && apt-get install -yq unzip
 
 
 # Final Image
-FROM ${DOCKER_BASE_IMAGE}
+FROM --platform=${TARGETPLATFORM} ${DOCKER_BASE_IMAGE}
 LABEL name="Mattermost Elrond" \
   maintainer="cloud-team@mattermost.com" \
   vendor="Mattermost" \
