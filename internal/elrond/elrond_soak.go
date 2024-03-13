@@ -44,21 +44,36 @@ func querySLOMetrics(ring *model.Ring, url string, queryTime time.Time, logger *
 	}
 
 	v1api := v1.NewAPI(client)
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
 	var results []pmodel.Vector
+
 	for _, installationGroup := range ring.InstallationGroups {
 		query := fmt.Sprintf("((slo:sli_error:ratio_rate5m{slo_service='%[1]s-ring-%[2]s'} > (14.4 * 0.005)) and ignoring(slo_window)(slo:sli_error:ratio_rate1h{slo_service='%[1]s-ring-%[2]s'} > (14.4 * 0.005))) or ignoring(slo_window)((slo:sli_error:ratio_rate30m{slo_service='%[1]s-ring-%[2]s'} > (6 * 0.005)) and ignoring(slo_window)(slo:sli_error:ratio_rate6h{slo_service='%[1]s-ring-%[2]s'} > (3.3 * 0.005))) or vector(0)", installationGroup.Name, installationGroup.ProvisionerGroupID)
-    logger.Infof("Running Thanos query %s", query)
-		result, warnings, err := v1api.Query(ctx, query, queryTime)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to query")
+		var lastErr error
+		// Retry mechanism for Thanos network connectivity issues.
+		for attempt := 0; attempt < 10; attempt++ {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			logger.Infof("Running Thanos query %s, attempt %d", query, attempt+1)
+			result, warnings, err := v1api.Query(ctx, query, queryTime)
+			cancel()
+
+			if err == nil {
+				if len(warnings) > 0 {
+					logger.Warnf("Encountered warnings obtaining metrics: %s", strings.Join(warnings, ", "))
+				}
+				results = append(results, result.(pmodel.Vector))
+				break
+			}
+
+			lastErr = err
+			logger.Warnf("Query failed: %v", err)
+			if attempt+1 < 10 {
+				time.Sleep(time.Second * time.Duration(2<<attempt)) // Exponential backoff
+			}
 		}
 
-		if len(warnings) > 0 {
-			return nil, errors.Errorf("encounted warnings obtaining metrics: %s", strings.Join(warnings, ", "))
+		if lastErr != nil {
+			return nil, errors.Wrap(lastErr, "failed to query after retries")
 		}
-		results = append(results, result.(pmodel.Vector))
 	}
 
 	return results, nil
