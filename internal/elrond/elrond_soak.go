@@ -54,6 +54,13 @@ func querySLOMetrics(ring *model.Ring, url string, queryTime time.Time, logger *
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			logger.Infof("Running Thanos query %s, attempt %d", query, attempt+1)
 			result, warnings, err := v1api.Query(ctx, query, queryTime)
+			if err != nil {
+				if errors.Is(err, context.DeadlineExceeded) {
+					logger.Errorf("Query failed due to timeout: %v", err)
+				} else {
+					logger.Errorf("Query failed due to an error: %v", err)
+				}
+			}
 			cancel()
 
 			if err == nil {
