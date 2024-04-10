@@ -63,6 +63,8 @@ func querySLOMetrics(ring *model.Ring, url string, queryTime time.Time, logger *
 			}
 			cancel()
 
+			lastErr = err
+
 			if err == nil {
 				if len(warnings) > 0 {
 					logger.Warnf("Encountered warnings obtaining metrics: %s", strings.Join(warnings, ", "))
@@ -71,7 +73,6 @@ func querySLOMetrics(ring *model.Ring, url string, queryTime time.Time, logger *
 				break
 			}
 
-			lastErr = err
 			logger.Warnf("Query failed: %v", err)
 			if attempt+1 < 10 {
 				time.Sleep(time.Second * time.Duration(2<<attempt)) // Exponential backoff
