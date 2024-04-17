@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	ringReleaseTable = "RingRelease"
+// ringReleaseTable = "RingRelease"
 )
 
 var ringReleaseSelect sq.SelectBuilder

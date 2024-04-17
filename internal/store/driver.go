@@ -5,6 +5,6 @@
 package store
 
 const (
-	driverPostgres = "postgres"
-	driverSqlite   = "sqlite3"
+// driverPostgres = "postgres"
+// driverSqlite   = "sqlite3"
 )

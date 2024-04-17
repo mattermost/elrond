@@ -41,7 +41,7 @@ check-style: govet lint
 ## Runs lint against all packages.
 lint: $(GOPATH)/bin/golangci-lint
 	@echo Running golangci-lint
-	golangci-lint run
+	golangci-lint run ./...
 
 ## Runs lint against all packages for changes only
 lint-changes: $(GOPATH)/bin/golangci-lint
@@ -81,7 +81,7 @@ build: ## Build the elrond
 		echo "Unknown architecture $(ARCH)"; \
 		exit 1; \
 	fi; \
-	GOOS=linux CGO_ENABLED=0 $(GO) build -ldflags '$(LDFLAGS)' -gcflags all=-trimpath=$(PWD) -asmflags all=-trimpath=$(PWD) -a -installsuffix cgo -o ./build/_output/bin/elrond  ./cmd/$(APP)
+	GOOS=linux CGO_ENABLED=0 $(GO) build -buildvcs=false -ldflags '$(LDFLAGS)' -gcflags all=-trimpath=$(PWD) -asmflags all=-trimpath=$(PWD) -a -installsuffix cgo -o ./build/_output/bin/elrond  ./cmd/$(APP)
 
 .PHONY: build-image
 build-image:  ## Build the docker image for Elrond
