@@ -25,6 +25,10 @@ LOGRUS_VERSION := $(shell find go.mod -type f -exec cat {} + | grep ${LOGRUS_URL
 
 LOGRUS_PATH := $(GOPATH)/pkg/mod/${LOGRUS_URL}\@${LOGRUS_VERSION}
 
+# Tools
+GOLANGCILINT_VER := v1.57.2
+GOLANGCILINT := $(TOOLS_BIN_DIR)/$(GOLANGCILINT_BIN)
+
 export GO111MODULE=on
 
 all: check-style dist
