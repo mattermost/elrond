@@ -73,35 +73,35 @@ func lockRings(c *Context, rings []string) (int, func()) {
 
 // lockRingInstallationGroup synchronizes access to the given ring installation group across potentially
 // multiple elrond servers.
-func lockRingInstallationGroup(c *Context, installationGroupID string) (*model.InstallationGroup, int, func()) {
-	installationGroup, err := c.Store.GetInstallationGroupByID(installationGroupID)
-	if err != nil {
-		c.Logger.WithError(err).Error("failed to query installation group")
-		return nil, http.StatusInternalServerError, nil
-	}
-	if installationGroup == nil {
-		return nil, http.StatusNotFound, nil
-	}
-
-	locked, err := c.Store.LockRingInstallationGroup(installationGroupID, c.RequestID)
-	if err != nil {
-		c.Logger.WithError(err).Error("failed to lock ring installation group")
-		return nil, http.StatusInternalServerError, nil
-	} else if !locked {
-		c.Logger.Error("failed to acquire lock for ring installation group")
-		return nil, http.StatusConflict, nil
-	}
-
-	unlockOnce := sync.Once{}
-
-	return installationGroup, 0, func() {
-		unlockOnce.Do(func() {
-			unlocked, err := c.Store.UnlockRingInstallationGroup(installationGroup.ID, c.RequestID, false)
-			if err != nil {
-				c.Logger.WithError(err).Errorf("failed to unlock ring installation group")
-			} else if !unlocked {
-				c.Logger.Error("failed to release lock for ring installation group")
-			}
-		})
-	}
-}
+//func lockRingInstallationGroup(c *Context, installationGroupID string) (*model.InstallationGroup, int, func()) {
+//	installationGroup, err := c.Store.GetInstallationGroupByID(installationGroupID)
+//	if err != nil {
+//		c.Logger.WithError(err).Error("failed to query installation group")
+//		return nil, http.StatusInternalServerError, nil
+//	}
+//	if installationGroup == nil {
+//		return nil, http.StatusNotFound, nil
+//	}
+//
+//	locked, err := c.Store.LockRingInstallationGroup(installationGroupID, c.RequestID)
+//	if err != nil {
+//		c.Logger.WithError(err).Error("failed to lock ring installation group")
+//		return nil, http.StatusInternalServerError, nil
+//	} else if !locked {
+//		c.Logger.Error("failed to acquire lock for ring installation group")
+//		return nil, http.StatusConflict, nil
+//	}
+//
+//	unlockOnce := sync.Once{}
+//
+//	return installationGroup, 0, func() {
+//		unlockOnce.Do(func() {
+//			unlocked, err := c.Store.UnlockRingInstallationGroup(installationGroup.ID, c.RequestID, false)
+//			if err != nil {
+//				c.Logger.WithError(err).Errorf("failed to unlock ring installation group")
+//			} else if !unlocked {
+//				c.Logger.Error("failed to release lock for ring installation group")
+//			}
+//		})
+//	}
+//}

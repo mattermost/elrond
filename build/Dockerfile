@@ -1,5 +1,5 @@
 # Build the Mattermost Elrond
-ARG DOCKER_BUILD_IMAGE=golang:1.20
+ARG DOCKER_BUILD_IMAGE=golang:1.22
 ARG DOCKER_BASE_IMAGE=alpine:3.19
 
 FROM --platform=${TARGETPLATFORM} ${DOCKER_BUILD_IMAGE} AS build

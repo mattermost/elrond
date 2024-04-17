@@ -3,7 +3,7 @@
 ################################################################################
 
 ## Docker Build Versions
-DOCKER_BUILD_IMAGE = golang:1.20
+DOCKER_BUILD_IMAGE = golang:1.22
 DOCKER_BASE_IMAGE = alpine:3.19
 
 ################################################################################
@@ -25,6 +25,10 @@ LOGRUS_VERSION := $(shell find go.mod -type f -exec cat {} + | grep ${LOGRUS_URL
 
 LOGRUS_PATH := $(GOPATH)/pkg/mod/${LOGRUS_URL}\@${LOGRUS_VERSION}
 
+# Tools
+GOLANGCILINT_VER := v1.57.2
+GOLANGCILINT := $(TOOLS_BIN_DIR)/$(GOLANGCILINT_BIN)
+
 export GO111MODULE=on
 
 all: check-style dist
@@ -35,12 +39,14 @@ check-style: govet lint
 	@echo Checking for style guide compliance
 
 ## Runs lint against all packages.
-.PHONY: lint
-lint:
-	@echo Running lint
-	env GO111MODULE=off $(GO) get -u golang.org/x/lint/golint
-	golint -set_exit_status ./...
-	@echo lint success
+lint: $(GOPATH)/bin/golangci-lint
+	@echo Running golangci-lint
+	golangci-lint run ./...
+
+## Runs lint against all packages for changes only
+lint-changes: $(GOPATH)/bin/golangci-lint
+	@echo Running golangci-lint over changes only
+	golangci-lint run -n
 
 ## Runs govet against all packages.
 .PHONY: vet
@@ -75,7 +81,7 @@ build: ## Build the elrond
 		echo "Unknown architecture $(ARCH)"; \
 		exit 1; \
 	fi; \
-	GOOS=linux CGO_ENABLED=0 $(GO) build -ldflags '$(LDFLAGS)' -gcflags all=-trimpath=$(PWD) -asmflags all=-trimpath=$(PWD) -a -installsuffix cgo -o ./build/_output/bin/elrond  ./cmd/$(APP)
+	GOOS=linux CGO_ENABLED=0 $(GO) build -buildvcs=false -ldflags '$(LDFLAGS)' -gcflags all=-trimpath=$(PWD) -asmflags all=-trimpath=$(PWD) -a -installsuffix cgo -o ./build/_output/bin/elrond  ./cmd/$(APP)
 
 .PHONY: build-image
 build-image:  ## Build the docker image for Elrond
@@ -109,6 +115,26 @@ build-image-with-tag:  ## Build the docker image for elrond
 	. -f build/Dockerfile -t $(ELROND_IMAGE) -t $(ELROND_IMAGE_REPO):${TAG} \
 	--push
 
+.PHONY: build-image-locally
+build-image-locally:  ## Build the docker image for Elrond
+	@echo Building Elrond Docker Image
+	@if [ -z "$(DOCKER_USERNAME)" ] || [ -z "$(DOCKER_PASSWORD)" ]; then \
+		echo "DOCKER_USERNAME and/or DOCKER_PASSWORD not set. Skipping Docker login."; \
+	else \
+		echo $(DOCKER_PASSWORD) | docker login --username $(DOCKER_USERNAME) --password-stdin; \
+	fi
+	docker buildx build \
+	--platform linux/arm64 \
+	--build-arg DOCKER_BUILD_IMAGE=$(DOCKER_BUILD_IMAGE) \
+	--build-arg DOCKER_BASE_IMAGE=$(DOCKER_BASE_IMAGE) \
+	. -f build/Dockerfile -t $(ELROND_IMAGE) \
+	--no-cache \
+	--load
+
+.PHONY: scan
+scan:
+	docker scout cves $(ELROND_IMAGE)
+
 .PHONY: push-image-pr
 push-image-pr:
 	@echo Push Image PR
@@ -136,3 +162,11 @@ deps:
 .PHONY: unittest
 unittest:
 	$(GO) test ./... -v -covermode=count -coverprofile=coverage.out
+
+
+## --------------------------------------
+## Tooling Binaries
+## --------------------------------------
+
+$(GOPATH)/bin/golangci-lint: ## Install golangci-lint
+	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCILINT_VER)
