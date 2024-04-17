@@ -35,12 +35,14 @@ check-style: govet lint
 	@echo Checking for style guide compliance
 
 ## Runs lint against all packages.
-.PHONY: lint
-lint:
-	@echo Running lint
-	env GO111MODULE=off $(GO) get -u golang.org/x/lint/golint
-	golint -set_exit_status ./...
-	@echo lint success
+lint: $(GOPATH)/bin/golangci-lint
+	@echo Running golangci-lint
+	golangci-lint run
+
+## Runs lint against all packages for changes only
+lint-changes: $(GOPATH)/bin/golangci-lint
+	@echo Running golangci-lint over changes only
+	golangci-lint run -n
 
 ## Runs govet against all packages.
 .PHONY: vet
@@ -156,3 +158,11 @@ deps:
 .PHONY: unittest
 unittest:
 	$(GO) test ./... -v -covermode=count -coverprofile=coverage.out
+
+
+## --------------------------------------
+## Tooling Binaries
+## --------------------------------------
+
+$(GOPATH)/bin/golangci-lint: ## Install golangci-lint
+	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCILINT_VER)
