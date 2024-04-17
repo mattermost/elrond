@@ -3,7 +3,7 @@
 ################################################################################
 
 ## Docker Build Versions
-DOCKER_BUILD_IMAGE = golang:1.20
+DOCKER_BUILD_IMAGE = golang:1.22
 DOCKER_BASE_IMAGE = alpine:3.19
 
 ################################################################################
@@ -108,6 +108,26 @@ build-image-with-tag:  ## Build the docker image for elrond
 	--build-arg DOCKER_BASE_IMAGE=$(DOCKER_BASE_IMAGE) \
 	. -f build/Dockerfile -t $(ELROND_IMAGE) -t $(ELROND_IMAGE_REPO):${TAG} \
 	--push
+
+.PHONY: build-image-locally
+build-image-locally:  ## Build the docker image for Elrond
+	@echo Building Elrond Docker Image
+	@if [ -z "$(DOCKER_USERNAME)" ] || [ -z "$(DOCKER_PASSWORD)" ]; then \
+		echo "DOCKER_USERNAME and/or DOCKER_PASSWORD not set. Skipping Docker login."; \
+	else \
+		echo $(DOCKER_PASSWORD) | docker login --username $(DOCKER_USERNAME) --password-stdin; \
+	fi
+	docker buildx build \
+	--platform linux/arm64 \
+	--build-arg DOCKER_BUILD_IMAGE=$(DOCKER_BUILD_IMAGE) \
+	--build-arg DOCKER_BASE_IMAGE=$(DOCKER_BASE_IMAGE) \
+	. -f build/Dockerfile -t $(ELROND_IMAGE) \
+	--no-cache \
+	--load
+
+.PHONY: scan
+scan:
+	docker scout cves $(ELROND_IMAGE)
 
 .PHONY: push-image-pr
 push-image-pr:
