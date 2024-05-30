@@ -435,10 +435,13 @@ var ringListCmd = &cobra.Command{
 
 				}
 				var remainTime = int64(0)
-				timePassed := ((time.Now().UnixNano() - ring.ReleaseAt) / int64(time.Second))
-				if timePassed < int64(ring.SoakTime) {
-					remainTime = int64(ring.SoakTime) - timePassed
+				if !desiredRelease.Force {
+					timePassed := ((time.Now().UnixNano() - ring.ReleaseAt) / int64(time.Second))
+					if timePassed < int64(ring.SoakTime) {
+						remainTime = int64(ring.SoakTime) - timePassed
+					}
 				}
+	
 				table.Append([]string{
 					ring.ID,
 					ring.State,
