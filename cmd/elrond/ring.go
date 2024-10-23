@@ -418,13 +418,13 @@ var ringListCmd = &cobra.Command{
 			table.SetHeader([]string{"ID", "STATE", "NAME", "PRIORITY", "INSTALLATION GROUPS", "SOAK TIME", "REMAINING SOAK TIME", "ACTIVERELEASE", "DESIREDRELEASE", "FORCE", "RELEASE AT"})
 
 			for _, ring := range rings {
-				activeRelease, err := client.GetRingRelease(ring.ActiveReleaseID)
-				if err != nil {
-					return errors.Wrap(err, "failed to get active release for table output")
+				activeRelease, activeReleaseErr := client.GetRingRelease(ring.ActiveReleaseID)
+				if activeReleaseErr != nil {
+					return errors.Wrap(activeReleaseErr, "failed to get active release for table output")
 				}
-				desiredRelease, err := client.GetRingRelease(ring.DesiredReleaseID)
-				if err != nil {
-					return errors.Wrap(err, "failed to get active release for table output")
+				desiredRelease, desiredReleaseErr := client.GetRingRelease(ring.DesiredReleaseID)
+				if desiredReleaseErr != nil {
+					return errors.Wrap(desiredReleaseErr, "failed to get active release for table output")
 				}
 
 				var igs []string
@@ -441,7 +441,7 @@ var ringListCmd = &cobra.Command{
 						remainTime = int64(ring.SoakTime) - timePassed
 					}
 				}
-	
+
 				table.Append([]string{
 					ring.ID,
 					ring.State,

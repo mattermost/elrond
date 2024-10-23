@@ -385,9 +385,9 @@ func handleReleaseAllRings(c *Context, w http.ResponseWriter, r *http.Request) {
 				Timestamp: time.Now().UnixNano(),
 				ExtraData: map[string]string{"Environment": c.Environment},
 			}
-			activeRelease, err := c.Store.GetRingRelease(ring.ActiveReleaseID)
-			if err != nil {
-				c.Logger.WithError(err).Error("failed to get ring active release details")
+			activeRelease, getErr := c.Store.GetRingRelease(ring.ActiveReleaseID)
+			if getErr != nil {
+				c.Logger.WithError(getErr).Error("failed to get ring active release details")
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}

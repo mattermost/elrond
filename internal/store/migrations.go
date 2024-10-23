@@ -22,17 +22,17 @@ type migration struct {
 // database.
 var migrations = []migration{
 	{semver.MustParse("0.0.0"), semver.MustParse("0.1.0"), func(e execer) error {
-		_, err := e.Exec(`
+		_, systemErr := e.Exec(`
 			CREATE TABLE System (
 				Key VARCHAR(64) PRIMARY KEY,
 				Value VARCHAR(1024) NULL
 			);
 		`)
-		if err != nil {
-			return errors.Wrap(err, "failed to create System table")
+		if systemErr != nil {
+			return errors.Wrap(systemErr, "failed to create System table")
 		}
 
-		if _, err = e.Exec(`
+		if _, ringErr := e.Exec(`
 			CREATE TABLE Ring (
 				ID CHAR(26) PRIMARY KEY,
 				State TEXT NOT NULL,
@@ -49,11 +49,11 @@ var migrations = []migration{
 				LockAcquiredBy CHAR(26) NULL,
 				LockAcquiredAt BIGINT NOT NULL
 			);
-		`); err != nil {
-			return errors.Wrap(err, "failed to create Ring table")
+		`); ringErr != nil {
+			return errors.Wrap(ringErr, "failed to create Ring table")
 		}
 
-		if _, err := e.Exec(`
+		if _, installationGroupErr := e.Exec(`
 			CREATE TABLE InstallationGroup (
 				ID TEXT PRIMARY KEY,
 				Name TEXT NOT NULL,
@@ -64,28 +64,28 @@ var migrations = []migration{
 				LockAcquiredBy CHAR(26) NULL,
 				LockAcquiredAt BIGINT NOT NULL
 			);
-		`); err != nil {
-			return errors.Wrap(err, "failed to create InstallationGroup table")
+		`); installationGroupErr != nil {
+			return errors.Wrap(installationGroupErr, "failed to create InstallationGroup table")
 		}
 
-		if _, err := e.Exec(`
+		if _, ringInstallationGroupErr := e.Exec(`
 			CREATE TABLE RingInstallationGroup (
 				ID TEXT PRIMARY KEY,
 				RingID TEXT NOT NULL,
 				InstallationGroupID TEXT NOT NULL
 			);
-		`); err != nil {
-			return err
+		`); ringInstallationGroupErr != nil {
+			return ringInstallationGroupErr
 		}
 
-		_, err = e.Exec(`
+		_, uniqueIndexErr := e.Exec(`
 		CREATE UNIQUE INDEX RingInstallationGroup_RingID_InstallationGroupID ON RingInstallationGroup (RingID, InstallationGroupID);
 	`)
-		if err != nil {
-			return errors.Wrap(err, "failed to create unique installation group index")
+		if uniqueIndexErr != nil {
+			return errors.Wrap(uniqueIndexErr, "failed to create unique installation group index")
 		}
 
-		if _, err := e.Exec(`
+		if _, ringReleaseErr := e.Exec(`
 			CREATE TABLE RingRelease (
 				ID TEXT PRIMARY KEY,
 				Image TEXT NOT NULL,
@@ -93,19 +93,19 @@ var migrations = []migration{
 				CreateAt BIGINT NOT NULL,
 				Force BOOLEAN NOT NULL
 			);
-		`); err != nil {
-			return err
+		`); ringReleaseErr != nil {
+			return ringReleaseErr
 		}
 
-		_, err = e.Exec(`
+		_, ringReleaseIndexErr := e.Exec(`
 			CREATE UNIQUE INDEX RingRelease_Image_Version_Force ON RingRelease (Image, Version, Force);
 		`)
-		if err != nil {
-			return err
+		if ringReleaseIndexErr != nil {
+			return ringReleaseIndexErr
 		}
 
 		// Add webhook table.
-		if _, err = e.Exec(`
+		if _, webhookErr := e.Exec(`
 			CREATE TABLE Webhooks (
 				ID TEXT PRIMARY KEY,
 				OwnerID TEXT NOT NULL,
@@ -113,25 +113,25 @@ var migrations = []migration{
 				CreateAt BIGINT NOT NULL,
 				DeleteAt BIGINT NOT NULL
 			);
-		`); err != nil {
-			return errors.Wrap(err, "failed to create Webhooks table")
+		`); webhookErr != nil {
+			return errors.Wrap(webhookErr, "failed to create Webhooks table")
 		}
 
-		if _, err = e.Exec(`
+		if _, webhookIndexErr := e.Exec(`
 			CREATE UNIQUE INDEX Webhook_URL_DeleteAt ON Webhooks (URL, DeleteAt);
-		`); err != nil {
-			return errors.Wrap(err, "failed to create unique webhook index")
+		`); webhookIndexErr != nil {
+			return errors.Wrap(webhookIndexErr, "failed to create unique webhook index")
 		}
 
 		return nil
 	}},
 	{semver.MustParse("0.1.0"), semver.MustParse("0.2.0"), func(e execer) error {
-		_, err := e.Exec(`ALTER TABLE RingRelease RENAME TO RingReleaseTemp;`)
-		if err != nil {
-			return err
+		_, renameTableErr := e.Exec(`ALTER TABLE RingRelease RENAME TO RingReleaseTemp;`)
+		if renameTableErr != nil {
+			return renameTableErr
 		}
 
-		_, err = e.Exec(`
+		_, createTableErr := e.Exec(`
 				CREATE TABLE RingRelease (
 					ID TEXT PRIMARY KEY,
 					Image TEXT NOT NULL,
@@ -141,11 +141,11 @@ var migrations = []migration{
 					Force BOOLEAN NOT NULL
 				);
 			`)
-		if err != nil {
-			return err
+		if createTableErr != nil {
+			return createTableErr
 		}
 
-		_, err = e.Exec(`
+		_, insertDataErr := e.Exec(`
 				INSERT INTO RingRelease
 				SELECT
 					ID,
@@ -157,23 +157,23 @@ var migrations = []migration{
 				FROM
 				RingReleaseTemp;
 			`)
-		if err != nil {
-			return err
+		if insertDataErr != nil {
+			return insertDataErr
 		}
 
-		_, err = e.Exec(`DROP TABLE RingReleaseTemp;`)
-		if err != nil {
-			return err
+		_, dropTableErr := e.Exec(`DROP TABLE RingReleaseTemp;`)
+		if dropTableErr != nil {
+			return dropTableErr
 		}
 		return nil
 	}},
 	{semver.MustParse("0.2.0"), semver.MustParse("0.3.0"), func(e execer) error {
-		_, err := e.Exec(`ALTER TABLE RingRelease RENAME TO RingReleaseTemp;`)
-		if err != nil {
-			return err
+		_, renameTableErr := e.Exec(`ALTER TABLE RingRelease RENAME TO RingReleaseTemp;`)
+		if renameTableErr != nil {
+			return renameTableErr
 		}
 
-		_, err = e.Exec(`
+		_, createTableErr := e.Exec(`
 				CREATE TABLE RingRelease (
 					ID TEXT PRIMARY KEY,
 					Image TEXT NOT NULL,
@@ -183,11 +183,11 @@ var migrations = []migration{
 					Force BOOLEAN NOT NULL
 				);
 			`)
-		if err != nil {
-			return err
+		if createTableErr != nil {
+			return createTableErr
 		}
 
-		_, err = e.Exec(`
+		_, insertDataErr := e.Exec(`
 				INSERT INTO RingRelease
 				SELECT
 					ID,
@@ -199,13 +199,13 @@ var migrations = []migration{
 				FROM
 				RingReleaseTemp;
 			`)
-		if err != nil {
-			return err
+		if insertDataErr != nil {
+			return insertDataErr
 		}
 
-		_, err = e.Exec(`DROP TABLE RingReleaseTemp;`)
-		if err != nil {
-			return err
+		_, dropTableErr := e.Exec(`DROP TABLE RingReleaseTemp;`)
+		if dropTableErr != nil {
+			return dropTableErr
 		}
 		return nil
 	}},

@@ -1,0 +1,29 @@
+# Docs: https://golangci-lint.run/usage/configuration/#config-file
+
+run:
+  timeout: 5m
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+linters-settings:
+  gofmt:
+    simplify: true
+  govet:
+    enable-all: true
+    disable:
+      - fieldalignment
+      - atomicalign
+
+linters:
+  disable-all: true
+  enable:
+    - gofmt
+    - gosimple
+    - govet
+    - ineffassign
+    - predeclared
+    - staticcheck
+    - unconvert
+    - unused
