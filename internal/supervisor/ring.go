@@ -141,9 +141,9 @@ func (s *RingSupervisor) Supervise(ring *model.Ring) {
 	//Move pending rings to release-failed as soon as an ring release fails
 	if newState == model.RingStateReleaseFailed || newState == model.RingStateSoakingFailed {
 		logger.Info("Ring release has failed, moving pending rings to failed state")
-		rings, err := s.store.GetRingsPendingWork()
-		if err != nil {
-			logger.WithError(err).Error("failed to get all rings pending work")
+		rings, getErr := s.store.GetRingsPendingWork()
+		if getErr != nil {
+			logger.WithError(getErr).Error("failed to get all rings pending work")
 			return
 		}
 		for _, ring := range rings {
@@ -245,15 +245,15 @@ func (s *RingSupervisor) checkRingReleasePending(ring *model.Ring, logger log.Fi
 	if !release.Force {
 		logger.Debug("Checking if other Rings are locked...")
 
-		ringsLocked, err := s.store.GetRingsLocked()
-		if err != nil {
-			logger.WithError(err).Error("Failed to query for rings that are under lock")
+		ringsLocked, getLockedErr := s.store.GetRingsLocked()
+		if getLockedErr != nil {
+			logger.WithError(getLockedErr).Error("Failed to query for rings that are under lock")
 			return model.RingStateReleaseFailed
 		}
 
-		ringsReleaseInProgress, err := s.store.GetRingsReleaseInProgress()
-		if err != nil {
-			logger.WithError(err).Error("Failed to query for rings that are under release")
+		ringsReleaseInProgress, ringsReleaseInProgressErr := s.store.GetRingsReleaseInProgress()
+		if ringsReleaseInProgressErr != nil {
+			logger.WithError(ringsReleaseInProgressErr).Error("Failed to query for rings that are under release")
 			return model.RingStateReleaseFailed
 		}
 
@@ -264,9 +264,9 @@ func (s *RingSupervisor) checkRingReleasePending(ring *model.Ring, logger log.Fi
 		}
 
 		logger.Debugf("Checking ring %s prioritization", ring.ID)
-		rings, err := s.store.GetUnlockedRingsPendingWork()
-		if err != nil {
-			logger.WithError(err).Error("Failed to get rings pending work for prioritization check")
+		rings, ringsErr := s.store.GetUnlockedRingsPendingWork()
+		if ringsErr != nil {
+			logger.WithError(ringsErr).Error("Failed to get rings pending work for prioritization check")
 			return model.RingStateReleaseFailed
 		}
 

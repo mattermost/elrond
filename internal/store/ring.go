@@ -160,7 +160,7 @@ func (sqlStore *SQLStore) CreateRing(ring *model.Ring, installationGroup *model.
 
 	if installationGroup != nil {
 		if installationGroup.Name != "" {
-			installationGroup, err := sqlStore.getOrCreateInstallationGroup(tx, installationGroup)
+			installationGroup, err = sqlStore.getOrCreateInstallationGroup(tx, installationGroup)
 			if err != nil {
 				return errors.Wrap(err, "failed to get or create installation group")
 			}

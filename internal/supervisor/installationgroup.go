@@ -132,9 +132,9 @@ func (s *InstallationGroupSupervisor) Supervise(installationGroup *model.Install
 	//Move rings to release-failed as soon as an IG release fails
 	if newState == model.InstallationGroupReleaseFailed || newState == model.InstallationGroupReleaseSoakingFailed {
 		logger.Info("Installation group release has failed, moving ring to failed state")
-		rings, err := s.store.GetRingsPendingWork()
-		if err != nil {
-			logger.WithError(err).Error("failed to get all rings pending work")
+		rings, getErr := s.store.GetRingsPendingWork()
+		if getErr != nil {
+			logger.WithError(getErr).Error("failed to get all rings pending work")
 			return
 		}
 		for _, ring := range rings {

@@ -3,8 +3,8 @@
 ################################################################################
 
 ## Docker Build Versions
-DOCKER_BUILD_IMAGE = golang:1.22
-DOCKER_BASE_IMAGE = alpine:3.19
+DOCKER_BUILD_IMAGE = golang:1.23
+DOCKER_BASE_IMAGE = alpine:3.20
 
 ################################################################################
 
@@ -25,9 +25,16 @@ LOGRUS_VERSION := $(shell find go.mod -type f -exec cat {} + | grep ${LOGRUS_URL
 
 LOGRUS_PATH := $(GOPATH)/pkg/mod/${LOGRUS_URL}\@${LOGRUS_VERSION}
 
+TOOLS_BIN_DIR := $(abspath bin)
+
+
 # Tools
-GOLANGCILINT_VER := v1.57.2
+GOLANGCILINT_VER := v1.61.0
 GOLANGCILINT := $(TOOLS_BIN_DIR)/$(GOLANGCILINT_BIN)
+
+OUTDATED_VER := master
+OUTDATED_BIN := go-mod-outdated
+OUTDATED_GEN := $(TOOLS_BIN_DIR)/$(OUTDATED_BIN)
 
 export GO111MODULE=on
 
@@ -35,7 +42,7 @@ all: check-style dist
 
 ## Runs govet and gofmt against all packages.
 .PHONY: check-style
-check-style: govet lint
+check-style: govet lint goformat
 	@echo Checking for style guide compliance
 
 ## Runs lint against all packages.
@@ -54,6 +61,26 @@ govet:
 	@echo Running govet
 	$(GO) vet ./...
 	@echo Govet success
+
+## Checks if files are formatted with go fmt.
+.PHONY: goformat
+goformat:
+	@echo Checking if code is formatted
+	@for package in $(PACKAGES); do \
+		echo "Checking "$$package; \
+		files=$$(go list -f '{{range .GoFiles}}{{$$.Dir}}/{{.}} {{end}}' $$package); \
+		if [ "$$files" ]; then \
+			gofmt_output=$$(gofmt -d -s $$files 2>&1); \
+			if [ "$$gofmt_output" ]; then \
+				echo "$$gofmt_output"; \
+				echo "gofmt failed"; \
+				echo "To fix it, run:"; \
+				echo "go fmt [FAILED_PACKAGE]"; \
+				exit 1; \
+			fi; \
+		fi; \
+	done
+	@echo "gofmt success"; \
 
 ## Builds and thats all :)
 .PHONY: dist
@@ -163,6 +190,16 @@ deps:
 unittest:
 	$(GO) test ./... -v -covermode=count -coverprofile=coverage.out
 
+.PHONY: check-modules
+check-modules: $(OUTDATED_GEN) ## Check outdated modules
+	@echo Checking outdated modules
+	$(GO) list -mod=mod -u -m -json all | $(OUTDATED_GEN) -update -direct
+
+.PHONY: update-modules
+update-modules: $(OUTDATED_GEN) ## Check outdated modules
+	@echo Update modules
+	$(GO) get -u ./...
+	$(GO) mod tidy
 
 ## --------------------------------------
 ## Tooling Binaries
@@ -170,3 +207,6 @@ unittest:
 
 $(GOPATH)/bin/golangci-lint: ## Install golangci-lint
 	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCILINT_VER)
+
+$(OUTDATED_GEN): ## Build go-mod-outdated.
+	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) github.com/psampaz/go-mod-outdated $(OUTDATED_BIN) $(OUTDATED_VER)
