@@ -40,6 +40,9 @@ func init() {
 	serverCmd.PersistentFlags().Bool("debug", false, "Whether to output debug logs.")
 	serverCmd.PersistentFlags().Bool("machine-readable-logs", false, "Output the logs in machine readable format.")
 	serverCmd.PersistentFlags().String("provisioner-server", "http://localhost:8075", "The provisioning server whose API will be queried.")
+	serverCmd.PersistentFlags().String("provisioner-client-id", "", "The client ID for the provisioning server.")
+	serverCmd.PersistentFlags().String("provisioner-client-secret", "", "The client secret for the provisioning server.")
+	serverCmd.PersistentFlags().String("provisioner-token-endpoint", "", "The token endpoint for the provisioning server.")
 	serverCmd.PersistentFlags().Int("provisioner-group-release-timeout", 3600, "The provisioner group release timeout")
 	serverCmd.PersistentFlags().String("grafana-url", "", "The Grafana url for the Grafana intergration.")
 	serverCmd.PersistentFlags().StringSlice("grafana-token", []string{""}, "The grafana token registered with Grafana Org. You can pass multiple entries.")
@@ -68,6 +71,9 @@ var serverCmd = &cobra.Command{
 		}
 
 		provisionerServer, _ := command.Flags().GetString("provisioner-server")
+		provisionerClientID, _ := command.Flags().GetString("provisioner-client-id")
+		provisionerClientSecret, _ := command.Flags().GetString("provisioner-client-secret")
+		provisionerTokenEndpoint, _ := command.Flags().GetString("provisioner-token-endpoint")
 
 		provisionerGroupReleaseTimeout, _ := command.Flags().GetInt("provisioner-group-release-timeout")
 
@@ -139,6 +145,9 @@ var serverCmd = &cobra.Command{
 			provisioningParams,
 			logger,
 			provisionerServer,
+			provisionerClientID,
+			provisionerClientSecret,
+			provisionerTokenEndpoint,
 		)
 
 		var multiDoer supervisor.MultiDoer

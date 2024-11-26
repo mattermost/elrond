@@ -874,6 +874,10 @@ github.com/mailru/easyjson v0.7.7 h1:UGYAvKxe3sBsEDzO8ZeWOSlIQfWFlxbzLZe7hwFURr0
 github.com/mailru/easyjson v0.7.7/go.mod h1:xzfreul335JAWq5oZzymOObrkdz5UnU4kGfJJLY9Nlc=
 github.com/mattermost/mattermost-cloud v0.87.1 h1:mOWK/6h0MLj3PEi4cDtbryIGGUzhNeHbsz/TC7wqJT8=
 github.com/mattermost/mattermost-cloud v0.87.1/go.mod h1:+m9IFIvfOPC1riQAQpJkBm/euRWmy1mmdqAzEMBD1AA=
+github.com/mattermost/mattermost-cloud v0.88.0 h1:AxBektcpqnUpu0vpAHa8Hms6xiTJowCcCxu29oxK+io=
+github.com/mattermost/mattermost-cloud v0.88.0/go.mod h1:wdB5YoL8dBpk6aIPFcmUufwXBzC8RD8DwOrRCtuIjuk=
+github.com/mattermost/mattermost-cloud v0.88.1-0.20241126160458-e65634a557cb h1:87sGktRXB9jwiaOohDoJx7qdGlrd3aupXpigwp3BzgY=
+github.com/mattermost/mattermost-cloud v0.88.1-0.20241126160458-e65634a557cb/go.mod h1:jdyhKNHMcHy23P1FBrKbsNXneYog2N0N4k2X702QVgA=
 github.com/mattermost/mattermost-operator v1.22.1 h1:jhgWkuuAHiwG9ryJ8UDnPgh+INWMlWk3EcWl3l7dT+0=
 github.com/mattermost/mattermost-operator v1.22.1/go.mod h1:Avn34Ah5qlupLNTooViFR2HRepc9anlqP4FnX+QvmzE=
 github.com/mattermost/rotator v0.2.1-0.20230830064954-61490ed26761 h1:O6zPyEslOAnzmvJjH9/jkwcJ2GcoK3jOyx2wl7ULFdc=
