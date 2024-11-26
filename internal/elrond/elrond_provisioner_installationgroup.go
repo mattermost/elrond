@@ -17,7 +17,7 @@ func (provisioner *ElProvisioner) ReleaseInstallationGroup(installationGroup *mo
 	logger := provisioner.logger.WithField("installationgroup", installationGroup.ID)
 	logger.Infof("Releasing installation group %s", installationGroup.ID)
 
-	client := cmodel.NewClientWithOAuth(provisioner.ProvisionerServer, nil, provisioner.ProvisionerClientID, provisioner.ProvisionerClientSecret, provisioner.ProvisionerTokenEndpoint)
+	client := provisioner.NewProvisionerClient()
 
 	logger.Info("Getting provisioner installation groups")
 
