@@ -5,6 +5,7 @@
 package elrond
 
 import (
+	cmodel "github.com/mattermost/mattermost-cloud/model"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -18,13 +19,24 @@ type ProvisioningParams struct {
 
 // ElProvisioner provisions release rings.
 type ElProvisioner struct {
-	params            ProvisioningParams
-	logger            log.FieldLogger
-	ProvisionerServer string
+	params                   ProvisioningParams
+	logger                   log.FieldLogger
+	ProvisionerServer        string
+	ProvisionerClientID      string
+	ProvisionerClientSecret  string
+	ProvisionerTokenEndpoint string
+}
+
+func (elp *ElProvisioner) NewProvisionerClient() *cmodel.Client {
+	if elp.ProvisionerClientID == "" || elp.ProvisionerClientSecret == "" || elp.ProvisionerTokenEndpoint == "" {
+		return cmodel.NewClient(elp.ProvisionerServer)
+	}
+
+	return cmodel.NewClientWithOAuth(elp.ProvisionerServer, nil, elp.ProvisionerClientID, elp.ProvisionerClientSecret, elp.ProvisionerTokenEndpoint)
 }
 
 // NewElrondProvisioner creates a new ElrondProvisioner.
-func NewElrondProvisioner(provisioningParams ProvisioningParams, logger log.FieldLogger, provisionerServer string) *ElProvisioner {
+func NewElrondProvisioner(provisioningParams ProvisioningParams, logger log.FieldLogger, provisionerServer, provisionerClientID, provisionerClientSecret, provisionerTokenEndpoint string) *ElProvisioner {
 	logger = logger.WithField("provisioner", "elrond")
 
 	return &ElProvisioner{

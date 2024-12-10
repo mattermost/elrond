@@ -2,6 +2,8 @@ module github.com/mattermost/elrond
 
 go 1.23
 
+toolchain go1.23.1
+
 exclude github.com/mattn/go-sqlite3 v2.0.3+incompatible
 
 require (
@@ -12,7 +14,7 @@ require (
 	github.com/grafana/grafana-api-golang-client v0.27.0
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/lib/pq v1.10.9
-	github.com/mattermost/mattermost-cloud v0.87.1
+	github.com/mattermost/mattermost-cloud v0.88.1-0.20241126160458-e65634a557cb
 	github.com/mattn/go-sqlite3 v1.14.24
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/pborman/uuid v1.2.1
