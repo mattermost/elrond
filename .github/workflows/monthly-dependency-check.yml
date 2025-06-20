@@ -1,0 +1,217 @@
+name: Monthly Dependency Check
+
+on:
+  schedule:
+    # Run on the 1st day of every month at 9:00 AM UTC
+    - cron: '0 9 1 * *'
+  workflow_dispatch:  # Allow manual triggering
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  check-dependencies:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+              - name: Set up Go
+          uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+          with:
+            go-version-file: 'go.mod'
+
+      - name: Install go-mod-outdated
+        run: |
+          go install github.com/psampaz/go-mod-outdated@359c31cb794e726817cfb14ed51e02b969f4d10c
+
+      - name: Check for outdated modules
+        id: check_outdated
+        run: |
+          echo "Checking for outdated dependencies..."
+          
+          # Create output files
+          OUTDATED_FILE="/tmp/outdated_deps.txt"
+          MAKEFILE_ANALYSIS="/tmp/makefile_analysis.txt"
+          
+          # Run go dependency check
+          echo "=== GO DEPENDENCIES ===" > "$OUTDATED_FILE"
+          if go list -mod=mod -u -m -json all | go-mod-outdated -update -direct >> "$OUTDATED_FILE" 2>&1; then
+            if [ $(go list -mod=mod -u -m -json all | go-mod-outdated -update -direct | wc -l) -gt 0 ]; then
+              echo "has_go_updates=true" >> $GITHUB_OUTPUT
+            else
+              echo "has_go_updates=false" >> $GITHUB_OUTPUT
+              echo "All Go dependencies are up to date! 🎉" >> "$OUTDATED_FILE"
+            fi
+          else
+            echo "has_go_updates=error" >> $GITHUB_OUTPUT
+          fi
+          
+          # Analyze Makefile for tool versions and dependencies
+          echo "=== MAKEFILE ANALYSIS ===" > "$MAKEFILE_ANALYSIS"
+          echo "Checking Makefile for potential updates..." >> "$MAKEFILE_ANALYSIS"
+          if [ -f "Makefile" ]; then
+            echo "📋 Found Makefile commands:" >> "$MAKEFILE_ANALYSIS"
+            grep -E "(check-modules|update-modules|outdated)" Makefile >> "$MAKEFILE_ANALYSIS" || echo "No module-related commands found" >> "$MAKEFILE_ANALYSIS"
+            echo "" >> "$MAKEFILE_ANALYSIS"
+            
+            # Look for tool versions in Makefile
+            echo "🔧 Tool references found:" >> "$MAKEFILE_ANALYSIS"
+            grep -E "(@v[0-9]|@latest|version.*=|VERSION.*=)" Makefile >> "$MAKEFILE_ANALYSIS" || echo "No version constraints found" >> "$MAKEFILE_ANALYSIS"
+          else
+            echo "No Makefile found" >> "$MAKEFILE_ANALYSIS"
+          fi
+          
+          # Combine outputs
+          cat "$MAKEFILE_ANALYSIS" >> "$OUTDATED_FILE"
+          
+          echo "OUTDATED_CONTENT<<EOF" >> $GITHUB_OUTPUT
+          cat "$OUTDATED_FILE" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Run dependency updates
+        id: update_deps
+        if: steps.check_outdated.outputs.has_go_updates == 'true'
+        run: |
+          echo "🚀 Running dependency updates..."
+          
+          # Store pre-update state
+          echo "BEFORE_UPDATE<<EOF" >> $GITHUB_OUTPUT
+          echo "Current go.mod hash: $(md5sum go.mod)" >> $GITHUB_OUTPUT
+          echo "Current go.sum hash: $(md5sum go.sum)" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          
+          # Run make update-modules
+          echo "Running: make update-modules"
+          if make update-modules; then
+            echo "✅ Successfully ran make update-modules"
+            echo "update_success=true" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Failed to run make update-modules"
+            echo "update_success=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+          
+          # Check what changed
+          echo "AFTER_UPDATE<<EOF" >> $GITHUB_OUTPUT
+          echo "New go.mod hash: $(md5sum go.mod)" >> $GITHUB_OUTPUT  
+          echo "New go.sum hash: $(md5sum go.sum)" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "=== CHANGES MADE ===" >> $GITHUB_OUTPUT
+          git diff --name-only >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "=== GO.MOD DIFF ===" >> $GITHUB_OUTPUT
+          git diff go.mod >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Check for changes
+        id: check_changes
+        if: steps.update_deps.outputs.update_success == 'true'
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "📝 Changes detected in repository"
+            git status --short
+          else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ No changes after running updates"
+          fi
+
+      - name: Create Pull Request
+        if: steps.check_changes.outputs.has_changes == 'true'
+        uses: peter-evans/create-pull-request@c5a7806660adbe173f04e3e038b0ccdcd758773c # v6.1.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: automated-dependency-updates-${{ github.run_number }}
+          title: "🤖 Automated Dependency Updates - $(date +'%B %Y')"
+          body: |
+            ## 🤖 Automated Monthly Dependency Updates
+            
+            This PR was automatically created by the monthly dependency check workflow.
+            
+            ### 📋 Changes Made
+            
+            - ✅ Executed `make update-modules`
+            - ✅ Updated Go dependencies to latest versions
+            - ✅ Cleaned up module files with `go mod tidy`
+            
+            ### 🔍 Before/After Summary
+            
+            **Before Update:**
+            ${{ steps.update_deps.outputs.BEFORE_UPDATE }}
+            
+            **After Update:**  
+            ${{ steps.update_deps.outputs.AFTER_UPDATE }}
+            
+            ### 🧪 Testing
+            
+            - [ ] Review the dependency changes
+            - [ ] Run tests locally: `make test` (if available)
+            - [ ] Verify application still builds: `make build` (if available)
+            - [ ] Check for any breaking changes in updated dependencies
+            
+            ### 📚 Dependencies Analyzed
+            
+            <details>
+            <summary>Click to see full dependency analysis</summary>
+            
+            ```
+            ${{ steps.check_outdated.outputs.OUTDATED_CONTENT }}
+            ```
+            </details>
+            
+            ---
+            
+            **Note**: This PR was created automatically. Please review carefully before merging.
+            
+            **Workflow run**: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          
+          commit-message: |
+            🤖 Update dependencies - $(date +'%B %Y')
+            
+            - Updated Go modules to latest versions
+            - Executed make update-modules
+            - Auto-generated by monthly dependency check
+            
+            Workflow: ${{ github.workflow }}
+            Run: ${{ github.run_number }}
+          
+          labels: |
+            dependencies
+            automated
+            monthly-update
+          
+          reviewers: mattermost/cloud-sre
+          
+          # Delete branch after merge
+          delete-branch: true
+
+      - name: Summary
+        run: |
+          echo "### 🤖 Monthly Dependency Update Complete! 📋" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ steps.check_outdated.outputs.has_go_updates }}" = "true" ]; then
+            if [ "${{ steps.check_changes.outputs.has_changes }}" = "true" ]; then
+              echo "✅ **Status**: Updates applied and PR created!" >> $GITHUB_STEP_SUMMARY
+              echo "🔗 **Action**: Review and merge the pull request" >> $GITHUB_STEP_SUMMARY
+              echo "🤖 **Automation**: Ran \`make update-modules\` successfully" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "ℹ️ **Status**: Updates ran but no changes detected" >> $GITHUB_STEP_SUMMARY
+              echo "💡 **Reason**: Dependencies may already be at latest compatible versions" >> $GITHUB_STEP_SUMMARY
+            fi
+          elif [ "${{ steps.check_outdated.outputs.has_go_updates }}" = "false" ]; then
+            echo "✅ **Status**: All dependencies are up to date!" >> $GITHUB_STEP_SUMMARY
+            echo "🎉 **Result**: No action needed this month" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Status**: Check failed - please investigate manually" >> $GITHUB_STEP_SUMMARY
+            echo "🔧 **Action**: Run \`make check-modules\` locally to debug" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📊 Workflow Details" >> $GITHUB_STEP_SUMMARY
+          echo "- **Go Updates Available**: ${{ steps.check_outdated.outputs.has_go_updates }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Update Executed**: ${{ steps.update_deps.outputs.update_success }}" >> $GITHUB_STEP_SUMMARY  
+          echo "- **Changes Detected**: ${{ steps.check_changes.outputs.has_changes }}" >> $GITHUB_STEP_SUMMARY 
