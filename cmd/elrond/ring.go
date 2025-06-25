@@ -440,7 +440,7 @@ var ringListCmd = &cobra.Command{
 					}
 				}
 
-				if err := table.Append([]interface{}{
+				if appendErr := table.Append([]interface{}{
 					ring.ID,
 					ring.State,
 					ring.Name,
@@ -452,12 +452,12 @@ var ringListCmd = &cobra.Command{
 					fmt.Sprintf("%s:%s", desiredRelease.Image, desiredRelease.Version),
 					strconv.FormatBool(desiredRelease.Force),
 					strconv.FormatInt(ring.ReleaseAt, 10),
-				}); err != nil {
-					return errors.Wrap(err, "failed to append row to table")
+				}); appendErr != nil {
+					return errors.Wrap(appendErr, "failed to append row to table")
 				}
 			}
-			if err := table.Render(); err != nil {
-				return errors.Wrap(err, "failed to render table")
+			if renderErr := table.Render(); renderErr != nil {
+				return errors.Wrap(renderErr, "failed to render table")
 			}
 
 			return nil

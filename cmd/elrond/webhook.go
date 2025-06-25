@@ -144,12 +144,12 @@ var webhookListCmd = &cobra.Command{
 			table.Header("ID", "OWNER", "URL")
 
 			for _, webhook := range webhooks {
-				if err := table.Append([]interface{}{webhook.ID, webhook.OwnerID, webhook.URL}); err != nil {
-					return errors.Wrap(err, "failed to append row to table")
+				if appendErr := table.Append([]interface{}{webhook.ID, webhook.OwnerID, webhook.URL}); appendErr != nil {
+					return errors.Wrap(appendErr, "failed to append row to table")
 				}
 			}
-			if err := table.Render(); err != nil {
-				return errors.Wrap(err, "failed to render table")
+			if renderErr := table.Render(); renderErr != nil {
+				return errors.Wrap(renderErr, "failed to render table")
 			}
 
 			return nil

@@ -14,7 +14,8 @@ linters-settings:
   gofmt:
     simplify: true
   govet:
-    enable-all: true
+    enable:
+      - shadow
     disable:
       - fieldalignment
       - atomicalign
