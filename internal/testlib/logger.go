@@ -11,7 +11,6 @@ import (
 	"github.com/golang/mock/gomock"
 	mocks "github.com/mattermost/elrond/internal/mocks/logger"
 	"github.com/sirupsen/logrus"
-	log "github.com/sirupsen/logrus"
 )
 
 // testingWriter is an io.Writer that writes through t.Log.
@@ -24,11 +23,11 @@ func (tw *testingWriter) Write(b []byte) (int, error) {
 	return len(b), nil
 }
 
-// MakeLogger creates a log.FieldLogger that routes to tb.Log.
-func MakeLogger(tb testing.TB) log.FieldLogger {
-	logger := log.New()
+// MakeLogger creates a logrus.FieldLogger that routes to tb.Log.
+func MakeLogger(tb testing.TB) logrus.FieldLogger {
+	logger := logrus.New()
 	logger.SetOutput(&testingWriter{tb})
-	logger.SetLevel(log.TraceLevel)
+	logger.SetLevel(logrus.TraceLevel)
 
 	return logger
 }

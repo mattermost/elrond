@@ -30,10 +30,7 @@ func (sqlStore *SQLStore) lockRows(table string, ids []string, lockerID string) 
 		return false, errors.Wrap(err, "failed to count rows affected")
 	}
 
-	locked := false
-	if count > 0 {
-		locked = true
-	}
+	locked := count > 0
 
 	if count > 0 && int(count) < len(ids) {
 		sqlStore.logger.Warnf("Locked only %d of %d rows in %s", count, len(ids), table)
@@ -73,10 +70,7 @@ func (sqlStore *SQLStore) unlockRows(table string, ids []string, lockerID string
 		return false, errors.Wrap(err, "failed to count rows affected")
 	}
 
-	unlocked := false
-	if count > 0 {
-		unlocked = true
-	}
+	unlocked := count > 0
 
 	if int(count) < len(ids) {
 		sqlStore.logger.Warnf("Unlocked only %d of %d rows in %s", count, len(ids), table)

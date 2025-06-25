@@ -140,14 +140,17 @@ var webhookListCmd = &cobra.Command{
 
 		outputToTable, _ := command.Flags().GetBool("table")
 		if outputToTable {
-			table := tablewriter.NewWriter(os.Stdout)
-			table.SetAlignment(tablewriter.ALIGN_LEFT)
-			table.SetHeader([]string{"ID", "OWNER", "URL"})
+			table := tablewriter.NewTable(os.Stdout)
+			table.Header("ID", "OWNER", "URL")
 
 			for _, webhook := range webhooks {
-				table.Append([]string{webhook.ID, webhook.OwnerID, webhook.URL})
+				if err := table.Append([]interface{}{webhook.ID, webhook.OwnerID, webhook.URL}); err != nil {
+					return errors.Wrap(err, "failed to append row to table")
+				}
 			}
-			table.Render()
+			if err := table.Render(); err != nil {
+				return errors.Wrap(err, "failed to render table")
+			}
 
 			return nil
 		}

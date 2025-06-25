@@ -412,10 +412,8 @@ var ringListCmd = &cobra.Command{
 
 		outputToTable, _ := command.Flags().GetBool("table")
 		if outputToTable {
-			table := tablewriter.NewWriter(os.Stdout)
-			table.SetAlignment(tablewriter.ALIGN_LEFT)
-			table.SetRowLine(true)
-			table.SetHeader([]string{"ID", "STATE", "NAME", "PRIORITY", "INSTALLATION GROUPS", "SOAK TIME", "REMAINING SOAK TIME", "ACTIVERELEASE", "DESIREDRELEASE", "FORCE", "RELEASE AT"})
+			table := tablewriter.NewTable(os.Stdout)
+			table.Header("ID", "STATE", "NAME", "PRIORITY", "INSTALLATION GROUPS", "SOAK TIME", "REMAINING SOAK TIME", "ACTIVERELEASE", "DESIREDRELEASE", "FORCE", "RELEASE AT")
 
 			for _, ring := range rings {
 				activeRelease, activeReleaseErr := client.GetRingRelease(ring.ActiveReleaseID)
@@ -442,7 +440,7 @@ var ringListCmd = &cobra.Command{
 					}
 				}
 
-				table.Append([]string{
+				if err := table.Append([]interface{}{
 					ring.ID,
 					ring.State,
 					ring.Name,
@@ -454,9 +452,13 @@ var ringListCmd = &cobra.Command{
 					fmt.Sprintf("%s:%s", desiredRelease.Image, desiredRelease.Version),
 					strconv.FormatBool(desiredRelease.Force),
 					strconv.FormatInt(ring.ReleaseAt, 10),
-				})
+				}); err != nil {
+					return errors.Wrap(err, "failed to append row to table")
+				}
 			}
-			table.Render()
+			if err := table.Render(); err != nil {
+				return errors.Wrap(err, "failed to render table")
+			}
 
 			return nil
 		}

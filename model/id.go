@@ -20,7 +20,7 @@ func NewID() string {
 	var b bytes.Buffer
 	encoder := base32.NewEncoder(encoding, &b)
 	encoder.Write(uuid.NewRandom()) //nolint
-	encoder.Close()
-	b.Truncate(26) // removes the '==' padding
+	_ = encoder.Close()             // base32 encoder close never fails, but we check for linter
+	b.Truncate(26)                  // removes the '==' padding
 	return b.String()
 }

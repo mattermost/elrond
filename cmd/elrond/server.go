@@ -167,7 +167,11 @@ var serverCmd = &cobra.Command{
 		}
 
 		supervisor := supervisor.NewScheduler(multiDoer, time.Duration(poll)*time.Second)
-		defer supervisor.Close()
+		defer func() {
+			if err := supervisor.Close(); err != nil {
+				logger.WithError(err).Error("Failed to close supervisor")
+			}
+		}()
 
 		router := mux.NewRouter()
 
