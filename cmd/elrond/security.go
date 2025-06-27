@@ -36,7 +36,7 @@ var securityRingCmd = &cobra.Command{
 var securityRingLockAPICmd = &cobra.Command{
 	Use:   "api-lock",
 	Short: "Lock API changes on a given ring",
-	RunE: func(command *cobra.Command, args []string) error {
+	RunE: func(command *cobra.Command, _ []string) error {
 		command.SilenceUsage = true
 
 		serverAddress, _ := command.Flags().GetString("server")
@@ -59,7 +59,7 @@ var securityRingLockAPICmd = &cobra.Command{
 var securityRingUnlockAPICmd = &cobra.Command{
 	Use:   "api-unlock",
 	Short: "Unlock API changes on a given ring",
-	RunE: func(command *cobra.Command, args []string) error {
+	RunE: func(command *cobra.Command, _ []string) error {
 		command.SilenceUsage = true
 
 		serverAddress, _ := command.Flags().GetString("server")

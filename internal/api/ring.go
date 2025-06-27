@@ -567,7 +567,7 @@ func handleRetryReleaseRing(c *Context, w http.ResponseWriter, r *http.Request) 
 }
 
 // handlePauseReleaseRing responds to POST /api/rings/release/pause, pausing all pending releases
-func handlePauseReleaseRing(c *Context, w http.ResponseWriter, r *http.Request) {
+func handlePauseReleaseRing(c *Context, w http.ResponseWriter, _ *http.Request) {
 	ringsPending, err := c.Store.GetRingsInPendingState()
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to get all rings pending work")
@@ -590,7 +590,7 @@ func handlePauseReleaseRing(c *Context, w http.ResponseWriter, r *http.Request) 
 }
 
 // handleResumeReleaseRing responds to POST /api/rings/release/pause, pausing all pending releases
-func handleResumeReleaseRing(c *Context, w http.ResponseWriter, r *http.Request) {
+func handleResumeReleaseRing(c *Context, w http.ResponseWriter, _ *http.Request) {
 	ringsPaused, err := c.Store.GetRingsInPendingState()
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to get all rings in paused state")
@@ -613,7 +613,7 @@ func handleResumeReleaseRing(c *Context, w http.ResponseWriter, r *http.Request)
 }
 
 // handleCancelReleaseRing responds to POST /api/rings/release/pause, pausing all pending releases
-func handleCancelReleaseRing(c *Context, w http.ResponseWriter, r *http.Request) {
+func handleCancelReleaseRing(c *Context, w http.ResponseWriter, _ *http.Request) {
 	ringsPending, err := c.Store.GetRingsInPendingState()
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to get all rings in pending state")

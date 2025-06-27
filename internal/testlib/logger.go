@@ -2,6 +2,7 @@
 // See LICENSE.txt for license information.
 //
 
+// Package testlib provides testing utilities and helpers for the elrond server.
 package testlib
 
 import (

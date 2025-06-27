@@ -32,3 +32,8 @@ linters:
     - ineffassign
     - staticcheck
     - unused
+    - revive          # replacement for golint
+    - gocyclo         # cyclomatic complexity
+    - misspell        # spelling errors
+    - predeclared     # check for shadowing predeclared identifiers
+    - unconvert       # unnecessary conversions

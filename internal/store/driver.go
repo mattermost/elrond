@@ -2,6 +2,7 @@
 // See LICENSE.txt for license information.
 //
 
+// Package store provides data persistence layer for the elrond server.
 package store
 
 const (

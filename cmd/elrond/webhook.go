@@ -48,7 +48,7 @@ var webhookCmd = &cobra.Command{
 var webhookCreateCmd = &cobra.Command{
 	Use:   "create",
 	Short: "Create a webhook.",
-	RunE: func(command *cobra.Command, args []string) error {
+	RunE: func(command *cobra.Command, _ []string) error {
 		command.SilenceUsage = true
 
 		serverAddress, _ := command.Flags().GetString("server")
@@ -80,7 +80,7 @@ var webhookCreateCmd = &cobra.Command{
 var webhookGetCmd = &cobra.Command{
 	Use:   "get",
 	Short: "Get a particular webhook.",
-	RunE: func(command *cobra.Command, args []string) error {
+	RunE: func(command *cobra.Command, _ []string) error {
 		command.SilenceUsage = true
 
 		serverAddress, _ := command.Flags().GetString("server")
@@ -114,7 +114,7 @@ var webhookGetCmd = &cobra.Command{
 var webhookListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List created webhooks.",
-	RunE: func(command *cobra.Command, args []string) error {
+	RunE: func(command *cobra.Command, _ []string) error {
 		command.SilenceUsage = true
 
 		serverAddress, _ := command.Flags().GetString("server")
@@ -166,7 +166,7 @@ var webhookListCmd = &cobra.Command{
 var webhookDeleteCmd = &cobra.Command{
 	Use:   "delete",
 	Short: "Delete a webhook.",
-	RunE: func(command *cobra.Command, args []string) error {
+	RunE: func(command *cobra.Command, _ []string) error {
 		command.SilenceUsage = true
 
 		serverAddress, _ := command.Flags().GetString("server")
