@@ -18,7 +18,7 @@ type mockWebhookStore struct {
 	Webhooks []*model.Webhook
 }
 
-func (s *mockWebhookStore) GetWebhooks(filter *model.WebhookFilter) ([]*model.Webhook, error) {
+func (s *mockWebhookStore) GetWebhooks(_ *model.WebhookFilter) ([]*model.Webhook, error) {
 	return s.Webhooks, nil
 }
 

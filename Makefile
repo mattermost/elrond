@@ -3,7 +3,7 @@
 ################################################################################
 
 ## Docker Build Versions
-DOCKER_BUILD_IMAGE = golang:1.23
+DOCKER_BUILD_IMAGE = golang:1.24
 DOCKER_BASE_IMAGE = alpine:3.20
 
 ################################################################################
@@ -29,7 +29,7 @@ TOOLS_BIN_DIR := $(abspath bin)
 
 
 # Tools
-GOLANGCILINT_VER := v1.61.0
+GOLANGCILINT_VER := v1.63.4
 GOLANGCILINT := $(TOOLS_BIN_DIR)/$(GOLANGCILINT_BIN)
 
 OUTDATED_VER := master
@@ -53,7 +53,7 @@ lint: $(GOPATH)/bin/golangci-lint
 ## Runs lint against all packages for changes only
 lint-changes: $(GOPATH)/bin/golangci-lint
 	@echo Running golangci-lint over changes only
-	golangci-lint run -n
+	golangci-lint run -n ./...
 
 ## Runs govet against all packages.
 .PHONY: vet

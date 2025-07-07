@@ -9,7 +9,7 @@ import (
 )
 
 // PrepareRing ensures a ring object is ready for provisioning.
-func (provisioner *ElProvisioner) PrepareRing(ring *model.Ring) bool {
+func (provisioner *ElProvisioner) PrepareRing(_ *model.Ring) bool {
 	return true
 }
 

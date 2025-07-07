@@ -1,3 +1,4 @@
+// Package elrond contains the core business logic for elrond server operations.
 package elrond
 
 import (

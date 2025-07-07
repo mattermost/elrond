@@ -94,7 +94,7 @@ func printJSON(data interface{}) error {
 var ringCreateCmd = &cobra.Command{
 	Use:   "create",
 	Short: "Create a ring.",
-	RunE: func(command *cobra.Command, args []string) error {
+	RunE: func(command *cobra.Command, _ []string) error {
 		command.SilenceUsage = true
 
 		serverAddress, _ := command.Flags().GetString("server")
@@ -154,7 +154,7 @@ var ringCreateCmd = &cobra.Command{
 var ringUpdateCmd = &cobra.Command{
 	Use:   "update",
 	Short: "Update a ring.",
-	RunE: func(command *cobra.Command, args []string) error {
+	RunE: func(command *cobra.Command, _ []string) error {
 		command.SilenceUsage = true
 
 		serverAddress, _ := command.Flags().GetString("server")
@@ -205,7 +205,7 @@ var ringUpdateCmd = &cobra.Command{
 var ringReleaseCmd = &cobra.Command{
 	Use:   "release",
 	Short: "Release an elrond ring.",
-	RunE: func(command *cobra.Command, args []string) error {
+	RunE: func(command *cobra.Command, _ []string) error {
 		command.SilenceUsage = true
 
 		serverAddress, _ := command.Flags().GetString("server")
@@ -304,7 +304,7 @@ var ringReleaseCmd = &cobra.Command{
 var ringReleaseGetCmd = &cobra.Command{
 	Use:   "get-release",
 	Short: "Get a particular ring release.",
-	RunE: func(command *cobra.Command, args []string) error {
+	RunE: func(command *cobra.Command, _ []string) error {
 		command.SilenceUsage = true
 
 		serverAddress, _ := command.Flags().GetString("server")
@@ -334,7 +334,7 @@ var ringReleaseGetCmd = &cobra.Command{
 var ringDeleteCmd = &cobra.Command{
 	Use:   "delete",
 	Short: "Delete a ring.",
-	RunE: func(command *cobra.Command, args []string) error {
+	RunE: func(command *cobra.Command, _ []string) error {
 		command.SilenceUsage = true
 
 		serverAddress, _ := command.Flags().GetString("server")
@@ -358,7 +358,7 @@ var ringDeleteCmd = &cobra.Command{
 var ringGetCmd = &cobra.Command{
 	Use:   "get",
 	Short: "Get a particular ring.",
-	RunE: func(command *cobra.Command, args []string) error {
+	RunE: func(command *cobra.Command, _ []string) error {
 		command.SilenceUsage = true
 
 		serverAddress, _ := command.Flags().GetString("server")
@@ -388,7 +388,7 @@ var ringGetCmd = &cobra.Command{
 var ringListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List created rings.",
-	RunE: func(command *cobra.Command, args []string) error {
+	RunE: func(command *cobra.Command, _ []string) error {
 		command.SilenceUsage = true
 
 		serverAddress, _ := command.Flags().GetString("server")
@@ -412,10 +412,8 @@ var ringListCmd = &cobra.Command{
 
 		outputToTable, _ := command.Flags().GetBool("table")
 		if outputToTable {
-			table := tablewriter.NewWriter(os.Stdout)
-			table.SetAlignment(tablewriter.ALIGN_LEFT)
-			table.SetRowLine(true)
-			table.SetHeader([]string{"ID", "STATE", "NAME", "PRIORITY", "INSTALLATION GROUPS", "SOAK TIME", "REMAINING SOAK TIME", "ACTIVERELEASE", "DESIREDRELEASE", "FORCE", "RELEASE AT"})
+			table := tablewriter.NewTable(os.Stdout)
+			table.Header("ID", "STATE", "NAME", "PRIORITY", "INSTALLATION GROUPS", "SOAK TIME", "REMAINING SOAK TIME", "ACTIVERELEASE", "DESIREDRELEASE", "FORCE", "RELEASE AT")
 
 			for _, ring := range rings {
 				activeRelease, activeReleaseErr := client.GetRingRelease(ring.ActiveReleaseID)
@@ -442,7 +440,7 @@ var ringListCmd = &cobra.Command{
 					}
 				}
 
-				table.Append([]string{
+				if appendErr := table.Append([]interface{}{
 					ring.ID,
 					ring.State,
 					ring.Name,
@@ -454,9 +452,13 @@ var ringListCmd = &cobra.Command{
 					fmt.Sprintf("%s:%s", desiredRelease.Image, desiredRelease.Version),
 					strconv.FormatBool(desiredRelease.Force),
 					strconv.FormatInt(ring.ReleaseAt, 10),
-				})
+				}); appendErr != nil {
+					return errors.Wrap(appendErr, "failed to append row to table")
+				}
 			}
-			table.Render()
+			if renderErr := table.Render(); renderErr != nil {
+				return errors.Wrap(renderErr, "failed to render table")
+			}
 
 			return nil
 		}

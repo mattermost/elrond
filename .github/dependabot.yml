@@ -2,8 +2,6 @@ version: 2
 updates:
   - package-ecosystem: "github-actions"
     directory: "/"
-    reviewers:
-      - "mattermost/cloud-sre"
     open-pull-requests-limit: 5
     groups:
       Github Actions updates:
@@ -14,3 +12,14 @@ updates:
       day: "monday"
       time: "10:00"
       interval: "weekly"
+  # Security updates - handled automatically by dependabot
+  - package-ecosystem: "gomod"
+    directory: "/"
+    open-pull-requests-limit: 5
+    groups:
+      Go security updates:
+        applies-to: security-updates
+        patterns: ["*"]
+    schedule:
+      # Check for security updates more frequently
+      interval: "daily"

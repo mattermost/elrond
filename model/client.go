@@ -2,6 +2,7 @@
 // See LICENSE.txt for license information.
 //
 
+// Package model contains data structures and client functionality for the elrond server.
 package model
 
 import (

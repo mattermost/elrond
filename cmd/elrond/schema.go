@@ -33,7 +33,7 @@ func sqlStore(command *cobra.Command) (*store.SQLStore, error) {
 var schemaMigrateCmd = &cobra.Command{
 	Use:   "migrate",
 	Short: "Migrate the schema to the latest supported version.",
-	RunE: func(command *cobra.Command, args []string) error {
+	RunE: func(command *cobra.Command, _ []string) error {
 		command.SilenceUsage = true
 
 		sqlStore, err := sqlStore(command)

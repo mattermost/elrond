@@ -2,6 +2,7 @@
 // See LICENSE.txt for license information.
 //
 
+// Package api provides HTTP API handlers for the elrond server.
 package api
 
 import (

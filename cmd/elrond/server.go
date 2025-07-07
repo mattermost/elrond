@@ -44,7 +44,7 @@ func init() {
 	serverCmd.PersistentFlags().String("provisioner-client-secret", "", "The client secret for the provisioning server.")
 	serverCmd.PersistentFlags().String("provisioner-token-endpoint", "", "The token endpoint for the provisioning server.")
 	serverCmd.PersistentFlags().Int("provisioner-group-release-timeout", 3600, "The provisioner group release timeout")
-	serverCmd.PersistentFlags().String("grafana-url", "", "The Grafana url for the Grafana intergration.")
+	serverCmd.PersistentFlags().String("grafana-url", "", "The Grafana url for the Grafana integration.")
 	serverCmd.PersistentFlags().StringSlice("grafana-token", []string{""}, "The grafana token registered with Grafana Org. You can pass multiple entries.")
 	serverCmd.PersistentFlags().String("thanos-url", "", "The Thanos url for the SLO checks while Soaking. If not added SLO metric checks are ignored")
 
@@ -57,7 +57,7 @@ func init() {
 var serverCmd = &cobra.Command{
 	Use:   "server",
 	Short: "Run the elrond server.",
-	RunE: func(command *cobra.Command, args []string) error {
+	RunE: func(command *cobra.Command, _ []string) error {
 		command.SilenceUsage = true
 
 		debug, _ := command.Flags().GetBool("debug")
@@ -167,7 +167,11 @@ var serverCmd = &cobra.Command{
 		}
 
 		supervisor := supervisor.NewScheduler(multiDoer, time.Duration(poll)*time.Second)
-		defer supervisor.Close()
+		defer func() {
+			if err := supervisor.Close(); err != nil {
+				logger.WithError(err).Error("Failed to close supervisor")
+			}
+		}()
 
 		router := mux.NewRouter()
 
@@ -219,6 +223,6 @@ var serverCmd = &cobra.Command{
 
 // deprecationWarnings performs all checks for deprecated settings and warns if
 // any are found.
-func deprecationWarnings(logger logrus.FieldLogger, cmd *cobra.Command) {
+func deprecationWarnings(_ logrus.FieldLogger, _ *cobra.Command) {
 	// Add deprecation logic here.
 }
