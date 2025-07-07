@@ -875,10 +875,10 @@ github.com/lyft/protoc-gen-star v0.6.0/go.mod h1:TGAoBVkt8w7MPG72TrKIu85MIdXwDuz
 github.com/lyft/protoc-gen-star v0.6.1/go.mod h1:TGAoBVkt8w7MPG72TrKIu85MIdXwDuzJYeZuUPFPNwA=
 github.com/mailru/easyjson v0.9.0 h1:PrnmzHw7262yW8sTBwxi1PdJA3Iw/EKBa8psRf7d9a4=
 github.com/mailru/easyjson v0.9.0/go.mod h1:1+xMtQp2MRNVL/V1bOzuP3aP8VNwRW55fQUto+XFtTU=
-github.com/mattermost/mattermost-cloud v0.90.0 h1:AMGa0XShewX5mjTSwG+ypQ5CJ0g/X0fOmAUEnDsG51M=
-github.com/mattermost/mattermost-cloud v0.90.0/go.mod h1:jdyhKNHMcHy23P1FBrKbsNXneYog2N0N4k2X702QVgA=
-github.com/mattermost/mattermost-operator v1.23.0 h1:u1ieY8iykFYv5LG8A3cjb6Is0rcQ9iR6tXQWgnJHqfo=
-github.com/mattermost/mattermost-operator v1.23.0/go.mod h1:d/lOUn5lvhTkeh4uJpEKq1K4Y4W9NjgVkrd+fqk/S0Y=
+github.com/mattermost/mattermost-cloud v0.92.0 h1:lOZq+X4tBzyfal5P2YogRxUPbs8Ylv1VLrF1wSVCM/c=
+github.com/mattermost/mattermost-cloud v0.92.0/go.mod h1:qxrqZvGU0xvwV3GOjNTn73wKBzIggeOO/rufREeWQ48=
+github.com/mattermost/mattermost-operator v1.24.0-rc.1 h1:65EMJlC10dZdQqEM77tcJY24u6b/GA8EokCz0suvXdQ=
+github.com/mattermost/mattermost-operator v1.24.0-rc.1/go.mod h1:6YkVPLpNT/0/YMmXR0QwpnAGT5bx6VGePkxwWAxGNkk=
 github.com/mattermost/rotator v0.2.1-0.20230830064954-61490ed26761 h1:O6zPyEslOAnzmvJjH9/jkwcJ2GcoK3jOyx2wl7ULFdc=
 github.com/mattermost/rotator v0.2.1-0.20230830064954-61490ed26761/go.mod h1:M9TNWt2wnV5XrUkP8LX+k0vpJSY8E11yIfVmrrOBAD0=
 github.com/mattn/go-colorable v0.1.14 h1:9A9LHSqF/7dyVVX6g0U9cwm9pG3kP9gSzcuIPHPsaIE=
