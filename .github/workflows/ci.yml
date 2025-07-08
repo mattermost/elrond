@@ -8,8 +8,10 @@ on:
 
 jobs:
   test:
+    if: ${{ (github.event_name == 'pull_request' || github.ref_name  == 'main') && github.actor != 'dependabot[bot]' }}
     uses: ./.github/workflows/.test.yml
   push-docker:
+    if: ${{ (github.event_name == 'pull_request' || github.ref_name  == 'main') && github.actor != 'dependabot[bot]' }}
     uses: ./.github/workflows/.docker-push.yml
     with:
       is_pr: "${{ github.ref != 'refs/heads/main' }}"
