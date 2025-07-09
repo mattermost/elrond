@@ -475,11 +475,13 @@ func handleReleaseRing(c *Context, w http.ResponseWriter, r *http.Request) {
 		if activeRelease.Image != ringReleaseRequest.Image || activeRelease.Version != ringReleaseRequest.Version || ringReleaseRequest.EnvVariables != nil {
 
 			ringRelease := model.RingRelease{
-				Version:      ringReleaseRequest.Version,
-				Image:        ringReleaseRequest.Image,
-				Force:        ringReleaseRequest.Force,
-				EnvVariables: ringReleaseRequest.EnvVariables,
-				CreateAt:     time.Now().UnixNano(),
+				Version:        ringReleaseRequest.Version,
+				Image:          ringReleaseRequest.Image,
+				Force:          ringReleaseRequest.Force,
+				EnvVariables:   ringReleaseRequest.EnvVariables,
+				ReadinessProbe: ringReleaseRequest.ReadinessProbe,
+				LivenessProbe:  ringReleaseRequest.LivenessProbe,
+				CreateAt:       time.Now().UnixNano(),
 			}
 
 			desiredRelease, err := c.Store.GetOrCreateRingRelease(&ringRelease)

@@ -38,10 +38,12 @@ func (provisioner *ElProvisioner) ReleaseInstallationGroup(installationGroup *mo
 	if group.Image != release.Image || group.Version != release.Version || checkChangeGroupEnvVariables(group.MattermostEnv, release.EnvVariables) {
 		logger.Infof("Image or group env variable changes were detected. Current provisioner group image is %s:%s and new image is %s:%s", group.Image, group.Version, release.Image, release.Version)
 		request := &cmodel.PatchGroupRequest{
-			ID:            installationGroup.ProvisionerGroupID,
-			Version:       &release.Version,
-			Image:         &release.Image,
-			MattermostEnv: release.EnvVariables,
+			ID:             installationGroup.ProvisionerGroupID,
+			Version:        &release.Version,
+			Image:          &release.Image,
+			MattermostEnv:  release.EnvVariables,
+			ReadinessProbe: release.ReadinessProbe,
+			LivenessProbe:  release.LivenessProbe,
 		}
 
 		logger.Infof("Updating provisioner group %s", installationGroup.ProvisionerGroupID)

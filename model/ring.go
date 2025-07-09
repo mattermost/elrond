@@ -9,6 +9,7 @@ import (
 	"io"
 
 	cmodel "github.com/mattermost/mattermost-cloud/model"
+	corev1 "k8s.io/api/core/v1"
 )
 
 // Ring represents a deployment ring.
@@ -32,12 +33,14 @@ type Ring struct {
 
 // RingRelease stores information neeeded for a ring release.
 type RingRelease struct {
-	ID           string
-	Image        string
-	Version      string
-	EnvVariables cmodel.EnvVarMap
-	CreateAt     int64
-	Force        bool
+	ID             string
+	Image          string
+	Version        string
+	EnvVariables   cmodel.EnvVarMap
+	ReadinessProbe *corev1.Probe
+	LivenessProbe  *corev1.Probe
+	CreateAt       int64
+	Force          bool
 }
 
 // Clone returns a deep copy the ring.

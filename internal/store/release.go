@@ -6,11 +6,13 @@ package store
 
 import (
 	"database/sql"
+	"encoding/json"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/mattermost/elrond/model"
 	cmodel "github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 )
 
 const (
@@ -25,11 +27,15 @@ var ringReleaseColumns = []string{
 	"RingRelease.CreateAt",
 	"RingRelease.Force",
 	"RingRelease.EnvVariables",
+	"RingRelease.ReadinessProbe",
+	"RingRelease.LivenessProbe",
 }
 
 type rawRingRelease struct {
 	*model.RingRelease
-	EnvVariables []byte
+	EnvVariables   []byte
+	ReadinessProbe []byte
+	LivenessProbe  []byte
 }
 
 func init() {
@@ -49,6 +55,25 @@ func (r *rawRingRelease) toRingRelease() (*model.RingRelease, error) {
 	}
 
 	r.RingRelease.EnvVariables = *mattermostEnv
+
+	// Handle ReadinessProbe
+	if r.ReadinessProbe != nil {
+		var readinessProbe corev1.Probe
+		if err := json.Unmarshal(r.ReadinessProbe, &readinessProbe); err != nil {
+			return nil, errors.Wrap(err, "failed to unmarshal readiness probe")
+		}
+		r.RingRelease.ReadinessProbe = &readinessProbe
+	}
+
+	// Handle LivenessProbe
+	if r.LivenessProbe != nil {
+		var livenessProbe corev1.Probe
+		if err := json.Unmarshal(r.LivenessProbe, &livenessProbe); err != nil {
+			return nil, errors.Wrap(err, "failed to unmarshal liveness probe")
+		}
+		r.RingRelease.LivenessProbe = &livenessProbe
+	}
+
 	return r.RingRelease, nil
 }
 
@@ -88,11 +113,31 @@ func (sqlStore *SQLStore) getOrCreateRingRelease(db execer, ringRelease *model.R
 		return nil, errors.Wrap(err, "failed to create new EnvVarMap JSON")
 	}
 
+	// Marshal probe data
+	var readinessProbeData []byte
+	var livenessProbeData []byte
+
+	if ringRelease.ReadinessProbe != nil {
+		readinessProbeData, err = json.Marshal(ringRelease.ReadinessProbe)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to marshal readiness probe")
+		}
+	}
+
+	if ringRelease.LivenessProbe != nil {
+		livenessProbeData, err = json.Marshal(ringRelease.LivenessProbe)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to marshal liveness probe")
+		}
+	}
+
 	builder := ringReleaseSelect.
 		Where("Image = ?", ringRelease.Image).
 		Where("Version = ?", ringRelease.Version).
 		Where("Force = ?", ringRelease.Force).
 		Where("EnvVariables = ?", envVarMap).
+		Where("ReadinessProbe = ?", readinessProbeData).
+		Where("LivenessProbe = ?", livenessProbeData).
 		Limit(1)
 
 	err = sqlStore.getBuilder(sqlStore.db, &rawRingReleaseOutput, builder)
@@ -101,12 +146,14 @@ func (sqlStore *SQLStore) getOrCreateRingRelease(db execer, ringRelease *model.R
 			sqlStore.logger.Debug("Entry does not exist in the db. Inserting...")
 			_, err = sqlStore.execBuilder(db, sq.Insert("RingRelease").
 				SetMap(map[string]interface{}{
-					"ID":           ringRelease.ID,
-					"Image":        ringRelease.Image,
-					"Version":      ringRelease.Version,
-					"EnvVariables": envVarMap,
-					"CreateAt":     ringRelease.CreateAt,
-					"Force":        ringRelease.Force,
+					"ID":             ringRelease.ID,
+					"Image":          ringRelease.Image,
+					"Version":        ringRelease.Version,
+					"EnvVariables":   envVarMap,
+					"ReadinessProbe": readinessProbeData,
+					"LivenessProbe":  livenessProbeData,
+					"CreateAt":       ringRelease.CreateAt,
+					"Force":          ringRelease.Force,
 				}))
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to create ring release")
