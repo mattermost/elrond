@@ -43,7 +43,7 @@ var ringInstallationGroupCmd = &cobra.Command{
 var ringInstallationGroupRegisterCmd = &cobra.Command{
 	Use:   "register",
 	Short: "Registers installation groups to the ring.",
-	RunE: func(command *cobra.Command, args []string) error {
+	RunE: func(command *cobra.Command, _ []string) error {
 		command.SilenceUsage = true
 
 		serverAddress, _ := command.Flags().GetString("server")
@@ -82,7 +82,7 @@ var ringInstallationGroupRegisterCmd = &cobra.Command{
 var ringInstallationGroupDeleteCmd = &cobra.Command{
 	Use:   "delete",
 	Short: "Deletes installation group from the ring.",
-	RunE: func(command *cobra.Command, args []string) error {
+	RunE: func(command *cobra.Command, _ []string) error {
 		command.SilenceUsage = true
 
 		serverAddress, _ := command.Flags().GetString("server")
@@ -103,7 +103,7 @@ var ringInstallationGroupDeleteCmd = &cobra.Command{
 var ringInstallationGroupUpdateCmd = &cobra.Command{
 	Use:   "update",
 	Short: "Updates installation group from the ring.",
-	RunE: func(command *cobra.Command, args []string) error {
+	RunE: func(command *cobra.Command, _ []string) error {
 		command.SilenceUsage = true
 
 		serverAddress, _ := command.Flags().GetString("server")

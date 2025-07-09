@@ -24,7 +24,7 @@ type mockRingStore struct {
 	UpdateRingCalls int
 }
 
-func (s *mockRingStore) GetRing(RingID string) (*model.Ring, error) {
+func (s *mockRingStore) GetRing(_ string) (*model.Ring, error) {
 	return s.Ring, nil
 }
 
@@ -32,7 +32,7 @@ func (s *mockRingStore) GetUnlockedRingsPendingWork() ([]*model.Ring, error) {
 	return s.UnlockedRingsPendingWork, nil
 }
 
-func (s *mockRingStore) GetRings(RingFilter *model.RingFilter) ([]*model.Ring, error) {
+func (s *mockRingStore) GetRings(_ *model.RingFilter) ([]*model.Ring, error) {
 	return s.Rings, nil
 }
 
@@ -48,78 +48,78 @@ func (s *mockRingStore) GetRingsPendingWork() ([]*model.Ring, error) {
 	return s.Rings, nil
 }
 
-func (s *mockRingStore) UpdateRing(Ring *model.Ring) error {
+func (s *mockRingStore) UpdateRing(_ *model.Ring) error {
 	s.UpdateRingCalls++
 	return nil
 }
 
-func (s *mockRingStore) UpdateRings(rings []*model.Ring) error {
+func (s *mockRingStore) UpdateRings(_ []*model.Ring) error {
 	s.UpdateRingCalls++
 	return nil
 }
 
-func (s *mockRingStore) CreateRing(Ring *model.Ring, installationGroup *model.InstallationGroup) error {
+func (s *mockRingStore) CreateRing(_ *model.Ring, _ *model.InstallationGroup) error {
 	return nil
 }
 
-func (s *mockRingStore) LockRing(RingID, lockerID string) (bool, error) {
+func (s *mockRingStore) LockRing(_, _ string) (bool, error) {
 	return true, nil
 }
 
-func (s *mockRingStore) UnlockRing(RingID string, lockerID string, force bool) (bool, error) {
+func (s *mockRingStore) UnlockRing(_ string, _ string, _ bool) (bool, error) {
 	if s.UnlockChan != nil {
 		close(s.UnlockChan)
 	}
 	return true, nil
 }
 
-func (s *mockRingStore) DeleteRing(RingID string) error {
+func (s *mockRingStore) DeleteRing(_ string) error {
 	return nil
 }
 
-func (s *mockRingStore) GetWebhooks(filter *model.WebhookFilter) ([]*model.Webhook, error) {
+func (s *mockRingStore) GetWebhooks(_ *model.WebhookFilter) ([]*model.Webhook, error) {
 	return nil, nil
 }
 
-func (s *mockRingStore) GetRingInstallationGroupsPendingWork(ringID string) ([]*model.InstallationGroup, error) {
+func (s *mockRingStore) GetRingInstallationGroupsPendingWork(_ string) ([]*model.InstallationGroup, error) {
 	return nil, nil
 }
 
-func (s *mockRingStore) GetInstallationGroupsForRing(ringID string) ([]*model.InstallationGroup, error) {
+func (s *mockRingStore) GetInstallationGroupsForRing(_ string) ([]*model.InstallationGroup, error) {
 	return nil, nil
 }
 
-func (s *mockRingStore) UpdateInstallationGroup(installationGroup *model.InstallationGroup) error {
+func (s *mockRingStore) UpdateInstallationGroup(_ *model.InstallationGroup) error {
 	return nil
 }
 
-func (s *mockRingStore) GetRingRelease(releaseID string) (*model.RingRelease, error) {
+func (s *mockRingStore) GetRingRelease(_ string) (*model.RingRelease, error) {
 	return nil, nil
 }
 
 type mockRingProvisioner struct{}
 
-func (p *mockRingProvisioner) PrepareRing(Ring *model.Ring) bool {
+func (p *mockRingProvisioner) PrepareRing(_ *model.Ring) bool {
 	return true
 }
 
-func (p *mockRingProvisioner) CreateRing(Ring *model.Ring) error {
+func (p *mockRingProvisioner) CreateRing(_ *model.Ring) error {
 	return nil
 }
 
-func (p *mockRingProvisioner) ReleaseRing(Ring *model.Ring) error {
+func (p *mockRingProvisioner) ReleaseRing(_ *model.Ring) error {
 	return nil
 }
 
-func (p *mockRingProvisioner) SoakRing(Ring *model.Ring) error {
+func (p *mockRingProvisioner) SoakRing(_ *model.Ring) error {
 	return nil
 }
 
-func (p *mockRingProvisioner) RollBackRing(Ring *model.Ring) error {
+func (p *mockRingProvisioner) RollBackRing(_ *model.Ring) error {
 	return nil
 }
 
-func (p *mockRingProvisioner) DeleteRing(Ring *model.Ring) error {
+func (p *mockRingProvisioner) DeleteRing(_ *model.Ring) error {
 	return nil
 }
 

@@ -27,6 +27,7 @@ type ElProvisioner struct {
 	ProvisionerTokenEndpoint string
 }
 
+// NewProvisionerClient creates a new provisioner client with OAuth if credentials are configured.
 func (elp *ElProvisioner) NewProvisionerClient() *cmodel.Client {
 	if elp.ProvisionerClientID == "" || elp.ProvisionerClientSecret == "" || elp.ProvisionerTokenEndpoint == "" {
 		return cmodel.NewClient(elp.ProvisionerServer)
@@ -40,8 +41,11 @@ func NewElrondProvisioner(provisioningParams ProvisioningParams, logger log.Fiel
 	logger = logger.WithField("provisioner", "elrond")
 
 	return &ElProvisioner{
-		params:            provisioningParams,
-		logger:            logger,
-		ProvisionerServer: provisionerServer,
+		params:                   provisioningParams,
+		logger:                   logger,
+		ProvisionerServer:        provisionerServer,
+		ProvisionerClientID:      provisionerClientID,
+		ProvisionerClientSecret:  provisionerClientSecret,
+		ProvisionerTokenEndpoint: provisionerTokenEndpoint,
 	}
 }

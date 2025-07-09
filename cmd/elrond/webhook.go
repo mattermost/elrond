@@ -48,7 +48,7 @@ var webhookCmd = &cobra.Command{
 var webhookCreateCmd = &cobra.Command{
 	Use:   "create",
 	Short: "Create a webhook.",
-	RunE: func(command *cobra.Command, args []string) error {
+	RunE: func(command *cobra.Command, _ []string) error {
 		command.SilenceUsage = true
 
 		serverAddress, _ := command.Flags().GetString("server")
@@ -80,7 +80,7 @@ var webhookCreateCmd = &cobra.Command{
 var webhookGetCmd = &cobra.Command{
 	Use:   "get",
 	Short: "Get a particular webhook.",
-	RunE: func(command *cobra.Command, args []string) error {
+	RunE: func(command *cobra.Command, _ []string) error {
 		command.SilenceUsage = true
 
 		serverAddress, _ := command.Flags().GetString("server")
@@ -114,7 +114,7 @@ var webhookGetCmd = &cobra.Command{
 var webhookListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List created webhooks.",
-	RunE: func(command *cobra.Command, args []string) error {
+	RunE: func(command *cobra.Command, _ []string) error {
 		command.SilenceUsage = true
 
 		serverAddress, _ := command.Flags().GetString("server")
@@ -140,14 +140,17 @@ var webhookListCmd = &cobra.Command{
 
 		outputToTable, _ := command.Flags().GetBool("table")
 		if outputToTable {
-			table := tablewriter.NewWriter(os.Stdout)
-			table.SetAlignment(tablewriter.ALIGN_LEFT)
-			table.SetHeader([]string{"ID", "OWNER", "URL"})
+			table := tablewriter.NewTable(os.Stdout)
+			table.Header("ID", "OWNER", "URL")
 
 			for _, webhook := range webhooks {
-				table.Append([]string{webhook.ID, webhook.OwnerID, webhook.URL})
+				if appendErr := table.Append([]interface{}{webhook.ID, webhook.OwnerID, webhook.URL}); appendErr != nil {
+					return errors.Wrap(appendErr, "failed to append row to table")
+				}
 			}
-			table.Render()
+			if renderErr := table.Render(); renderErr != nil {
+				return errors.Wrap(renderErr, "failed to render table")
+			}
 
 			return nil
 		}
@@ -163,7 +166,7 @@ var webhookListCmd = &cobra.Command{
 var webhookDeleteCmd = &cobra.Command{
 	Use:   "delete",
 	Short: "Delete a webhook.",
-	RunE: func(command *cobra.Command, args []string) error {
+	RunE: func(command *cobra.Command, _ []string) error {
 		command.SilenceUsage = true
 
 		serverAddress, _ := command.Flags().GetString("server")

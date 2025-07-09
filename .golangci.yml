@@ -1,5 +1,8 @@
 # Docs: https://golangci-lint.run/usage/configuration/#config-file
 
+# This version should be updated when updating golangci-lint version
+version: 2
+
 run:
   timeout: 5m
 
@@ -11,19 +14,26 @@ linters-settings:
   gofmt:
     simplify: true
   govet:
-    enable-all: true
+    enable:
+      - shadow
     disable:
       - fieldalignment
       - atomicalign
 
+formatters:
+  gofmt:
+    simplify: true
+
 linters:
   disable-all: true
   enable:
-    - gofmt
-    - gosimple
+    - errcheck
     - govet
     - ineffassign
-    - predeclared
     - staticcheck
-    - unconvert
     - unused
+    - revive          # replacement for golint
+    - gocyclo         # cyclomatic complexity
+    - misspell        # spelling errors
+    - predeclared     # check for shadowing predeclared identifiers
+    - unconvert       # unnecessary conversions

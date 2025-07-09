@@ -31,7 +31,7 @@ func (fd *failDoer) Do() error {
 	return fmt.Errorf("failed")
 }
 
-func (td *failDoer) Shutdown() {}
+func (fd *failDoer) Shutdown() {}
 
 func TestMultiDoer(t *testing.T) {
 	t.Run("failure", func(t *testing.T) {

@@ -2,6 +2,7 @@
 // See LICENSE.txt for license information.
 //
 
+// Package webhook handles webhook management and delivery for the elrond server.
 package webhook
 
 import (

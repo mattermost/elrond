@@ -2,6 +2,7 @@
 // See LICENSE.txt for license information.
 //
 
+// Package supervisor handles background tasks and automated operations for the elrond server.
 package supervisor
 
 // Doer describes an action to be done.
