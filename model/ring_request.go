@@ -12,6 +12,7 @@ import (
 
 	cmodel "github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 )
 
 // CreateRingRequest specifies the parameters for a new ring.
@@ -37,10 +38,12 @@ type UpdateRingRequest struct {
 
 // RingReleaseRequest contains metadata related to changing the installed ring state.
 type RingReleaseRequest struct {
-	Image        string
-	Version      string
-	Force        bool
-	EnvVariables cmodel.EnvVarMap
+	Image          string
+	Version        string
+	Force          bool
+	EnvVariables   cmodel.EnvVarMap
+	ReadinessProbe *corev1.Probe `json:"readinessProbe,omitempty"`
+	LivenessProbe  *corev1.Probe `json:"livenessProbe,omitempty"`
 }
 
 // GetRingsRequest describes the parameters to request a list of rings.
