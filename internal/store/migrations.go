@@ -209,4 +209,17 @@ var migrations = []migration{
 		}
 		return nil
 	}},
+	{semver.MustParse("0.3.0"), semver.MustParse("0.4.0"), func(e execer) error {
+		_, err := e.Exec(`ALTER TABLE RingRelease ADD COLUMN ReadinessProbe BYTEA NULL;`)
+		if err != nil {
+			return errors.Wrap(err, "failed to create ReadinessProbe column")
+		}
+
+		_, err = e.Exec(`ALTER TABLE RingRelease ADD COLUMN LivenessProbe BYTEA NULL;`)
+		if err != nil {
+			return errors.Wrap(err, "failed to create LivenessProbe column")
+		}
+
+		return nil
+	}},
 }
