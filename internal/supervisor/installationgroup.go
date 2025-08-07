@@ -70,6 +70,14 @@ func (s *InstallationGroupSupervisor) Do() error {
 		return nil
 	}
 
+	s.logger.WithFields(log.Fields{
+		"pendingCount": len(installationGroups),
+		"action":       "starting_supervision_cycle",
+	}).Debug("Starting installation group supervision cycle")
+
+	// Clean up locks for groups that are ready in provisioner but still locked
+	s.forceUnlockStaleLocks(s.logger)
+
 	for _, installationGroup := range installationGroups {
 		s.Supervise(installationGroup)
 	}
@@ -287,4 +295,88 @@ func (s *InstallationGroupSupervisor) soakInstallationGroup(installationGroup *m
 	}
 
 	return model.InstallationGroupStable
+}
+
+// forceUnlockStaleLocks unlocks installation groups that are stuck in release-pending state
+func (s *InstallationGroupSupervisor) forceUnlockStaleLocks(logger log.FieldLogger) {
+	lockedGroups, err := s.store.GetInstallationGroupsLocked()
+	if err != nil {
+		logger.WithError(err).Error("Failed to get locked installation groups for lock cleanup")
+		return
+	}
+
+	if len(lockedGroups) == 0 {
+		return
+	}
+
+	for _, group := range lockedGroups {
+		// Only check groups that are in release-pending state
+		if group.State != model.InstallationGroupReleasePending {
+			continue
+		}
+
+		// For release-pending groups, check if they've been locked too long
+		// (they should transition quickly if conditions are met)
+		isReady, err := s.checkPendingGroupStuck(group, logger)
+		if err != nil {
+			logger.WithError(err).WithFields(log.Fields{
+				"installationGroupID": group.ID,
+				"action":              "pending_group_check_failed",
+			}).Error("Failed to check if release-pending group is stuck")
+			continue
+		}
+
+		// If stuck for too long, unlock it
+		if isReady {
+			lockAcquiredBy := ""
+			if group.LockAcquiredBy != nil {
+				lockAcquiredBy = *group.LockAcquiredBy
+			}
+
+			logger.WithFields(log.Fields{
+				"installationGroupID": group.ID,
+				"name":                group.Name,
+				"lockAcquiredBy":      lockAcquiredBy,
+				"action":              "force_unlock_stuck_pending",
+			}).Warn("Release-pending installation group locked too long, force unlocking")
+
+			// Force unlock the lock
+			unlocked, err := s.store.UnlockRingInstallationGroup(group.ID, lockAcquiredBy, true)
+			if err != nil {
+				logger.WithError(err).WithFields(log.Fields{
+					"installationGroupID": group.ID,
+					"lockAcquiredBy":      lockAcquiredBy,
+					"action":              "force_unlock_failed",
+				}).Error("Failed to force unlock installation group")
+			} else if unlocked {
+				logger.WithFields(log.Fields{
+					"installationGroupID": group.ID,
+					"lockAcquiredBy":      lockAcquiredBy,
+					"action":              "force_unlock_successful",
+				}).Info("Successfully force unlocked stuck release-pending installation group")
+			}
+		}
+	}
+}
+
+// checkPendingGroupStuck checks if a release-pending group has been locked too long
+func (s *InstallationGroupSupervisor) checkPendingGroupStuck(group *model.InstallationGroup, logger log.FieldLogger) (bool, error) {
+	// Calculate how long the lock has been held
+	lockDuration := time.Duration(time.Now().UnixNano() - group.LockAcquiredAt)
+
+	// Release-pending groups should transition quickly (within 5 minutes)
+	// if conditions are met. If locked longer, it's likely stuck.
+	stuckThreshold := 5 * time.Minute
+
+	isStuck := lockDuration > stuckThreshold
+
+	logger.WithFields(log.Fields{
+		"installationGroupID": group.ID,
+		"lockDuration":        lockDuration.String(),
+		"stuckThreshold":      stuckThreshold.String(),
+		"isStuck":             isStuck,
+		"action":              "pending_group_stuck_check",
+	}).Debug("Checking if release-pending group is stuck")
+
+	return isStuck, nil
 }
