@@ -379,22 +379,6 @@ func (s *InstallationGroupSupervisor) forceUnlockStaleLocks(logger log.FieldLogg
 
 // checkLegitimateWait checks if there are valid reasons for a group to be in release-pending state
 func (s *InstallationGroupSupervisor) checkLegitimateWait(group *model.InstallationGroup, logger log.FieldLogger) (bool, error) {
-	// Check if ring is in correct state
-	ring, err := s.store.GetRingFromInstallationGroupID(group.ID)
-	if err != nil {
-		return false, errors.Wrap(err, "failed to get ring for installation group")
-	}
-
-	// If ring is not in a state that allows release, legitimately pending
-	if ring.State != model.RingStateReleaseRequested && ring.State != model.RingStateReleaseInProgress {
-		logger.WithFields(log.Fields{
-			"installationGroupID": group.ID,
-			"ringState":           ring.State,
-			"action":              "waiting_for_ring_state",
-		}).Debug("Group is legitimately waiting for ring state")
-		return true, nil
-	}
-
 	// Check if waiting for other groups in progress
 	inProgressGroups, err := s.store.GetInstallationGroupsReleaseInProgress()
 	if err != nil {
