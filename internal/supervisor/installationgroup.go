@@ -10,6 +10,7 @@ import (
 
 	"github.com/mattermost/elrond/internal/webhook"
 	"github.com/mattermost/elrond/model"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -298,6 +299,7 @@ func (s *InstallationGroupSupervisor) soakInstallationGroup(installationGroup *m
 }
 
 // forceUnlockStaleLocks unlocks installation groups that are stuck in release-pending state
+// with no legitimate reason to be pending
 func (s *InstallationGroupSupervisor) forceUnlockStaleLocks(logger log.FieldLogger) {
 	lockedGroups, err := s.store.GetInstallationGroupsLocked()
 	if err != nil {
@@ -315,19 +317,36 @@ func (s *InstallationGroupSupervisor) forceUnlockStaleLocks(logger log.FieldLogg
 			continue
 		}
 
-		// For release-pending groups, check if they've been locked too long
-		// (they should transition quickly if conditions are met)
-		isReady, err := s.checkPendingGroupStuck(group, logger)
+		// First check if there are legitimate reasons to be pending
+		isLegitimatelyPending, err := s.checkLegitimateWait(group, logger)
 		if err != nil {
 			logger.WithError(err).WithFields(log.Fields{
 				"installationGroupID": group.ID,
-				"action":              "pending_group_check_failed",
-			}).Error("Failed to check if release-pending group is stuck")
+				"action":              "check_legitimate_wait_failed",
+			}).Error("Failed to check if group is legitimately pending")
 			continue
 		}
 
-		// If stuck for too long, unlock it
-		if isReady {
+		if isLegitimatelyPending {
+			logger.WithFields(log.Fields{
+				"installationGroupID": group.ID,
+				"action":              "legitimate_pending_state",
+			}).Debug("Group is legitimately pending, not stuck")
+			continue
+		}
+
+		// If no legitimate reason to be pending, check if lock is too old
+		isStuck, err := s.checkPendingGroupStuck(group, logger)
+		if err != nil {
+			logger.WithError(err).WithFields(log.Fields{
+				"installationGroupID": group.ID,
+				"action":              "check_stuck_failed",
+			}).Error("Failed to check if group is stuck")
+			continue
+		}
+
+		// If stuck with no legitimate reason, force unlock
+		if isStuck {
 			lockAcquiredBy := ""
 			if group.LockAcquiredBy != nil {
 				lockAcquiredBy = *group.LockAcquiredBy
@@ -337,10 +356,9 @@ func (s *InstallationGroupSupervisor) forceUnlockStaleLocks(logger log.FieldLogg
 				"installationGroupID": group.ID,
 				"name":                group.Name,
 				"lockAcquiredBy":      lockAcquiredBy,
-				"action":              "force_unlock_stuck_pending",
-			}).Warn("Release-pending installation group locked too long, force unlocking")
+				"action":              "force_unlock_no_legitimate_wait",
+			}).Warn("Release-pending installation group locked with no legitimate reason, force unlocking")
 
-			// Force unlock the lock
 			unlocked, err := s.store.UnlockRingInstallationGroup(group.ID, lockAcquiredBy, true)
 			if err != nil {
 				logger.WithError(err).WithFields(log.Fields{
@@ -359,13 +377,73 @@ func (s *InstallationGroupSupervisor) forceUnlockStaleLocks(logger log.FieldLogg
 	}
 }
 
+// checkLegitimateWait checks if there are valid reasons for a group to be in release-pending state
+func (s *InstallationGroupSupervisor) checkLegitimateWait(group *model.InstallationGroup, logger log.FieldLogger) (bool, error) {
+	// Check if ring is in correct state
+	ring, err := s.store.GetRingFromInstallationGroupID(group.ID)
+	if err != nil {
+		return false, errors.Wrap(err, "failed to get ring for installation group")
+	}
+
+	// If ring is not in a state that allows release, legitimately pending
+	if ring.State != model.RingStateReleaseRequested && ring.State != model.RingStateReleaseInProgress {
+		logger.WithFields(log.Fields{
+			"installationGroupID": group.ID,
+			"ringState":           ring.State,
+			"action":              "waiting_for_ring_state",
+		}).Debug("Group is legitimately waiting for ring state")
+		return true, nil
+	}
+
+	// Check if waiting for other groups in progress
+	inProgressGroups, err := s.store.GetInstallationGroupsReleaseInProgress()
+	if err != nil {
+		return false, errors.Wrap(err, "failed to get installation groups in progress")
+	}
+
+	if len(inProgressGroups) > 0 {
+		logger.WithFields(log.Fields{
+			"installationGroupID": group.ID,
+			"waitingForGroup":     inProgressGroups[0].ID,
+			"waitingForState":     inProgressGroups[0].State,
+			"action":              "waiting_for_group_in_progress",
+		}).Debug("Group is legitimately waiting for another group in progress")
+		return true, nil
+	}
+
+	// Check if other groups are legitimately locked
+	lockedGroups, err := s.store.GetInstallationGroupsLocked()
+	if err != nil {
+		return false, errors.Wrap(err, "failed to get locked installation groups")
+	}
+
+	// If there are other locked groups that are not this one
+	for _, lockedGroup := range lockedGroups {
+		if lockedGroup.ID != group.ID {
+			logger.WithFields(log.Fields{
+				"installationGroupID": group.ID,
+				"waitingForGroup":     lockedGroup.ID,
+				"waitingForState":     lockedGroup.State,
+				"action":              "waiting_for_locked_group",
+			}).Debug("Group is legitimately waiting for another locked group")
+			return true, nil
+		}
+	}
+
+	// No legitimate reason found to be pending
+	logger.WithFields(log.Fields{
+		"installationGroupID": group.ID,
+		"action":              "no_legitimate_wait_reason",
+	}).Debug("No legitimate reason found for group to be pending")
+	return false, nil
+}
+
 // checkPendingGroupStuck checks if a release-pending group has been locked too long
 func (s *InstallationGroupSupervisor) checkPendingGroupStuck(group *model.InstallationGroup, logger log.FieldLogger) (bool, error) {
 	// Calculate how long the lock has been held
 	lockDuration := time.Duration(time.Now().UnixNano() - group.LockAcquiredAt)
 
-	// Release-pending groups should transition quickly (within 5 minutes)
-	// if conditions are met. If locked longer, it's likely stuck.
+	// If no legitimate reason to be pending, use a shorter threshold
 	stuckThreshold := 5 * time.Minute
 
 	isStuck := lockDuration > stuckThreshold
@@ -376,7 +454,7 @@ func (s *InstallationGroupSupervisor) checkPendingGroupStuck(group *model.Instal
 		"stuckThreshold":      stuckThreshold.String(),
 		"isStuck":             isStuck,
 		"action":              "pending_group_stuck_check",
-	}).Debug("Checking if release-pending group is stuck")
+	}).Debug("Checking if release-pending group with no legitimate wait reason is stuck")
 
 	return isStuck, nil
 }
