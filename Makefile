@@ -30,7 +30,6 @@ TOOLS_BIN_DIR := $(abspath bin)
 
 # Tools
 GOLANGCILINT_VER := v1.63.4
-GOLANGCILINT := $(TOOLS_BIN_DIR)/$(GOLANGCILINT_BIN)
 
 OUTDATED_VER := master
 OUTDATED_BIN := go-mod-outdated
@@ -158,6 +157,38 @@ build-image-locally:  ## Build the docker image for Elrond
 	--no-cache \
 	--load
 
+.PHONY: build-image-amd64
+build-image-amd64:  ## Build AMD64 docker image for Elrond (native build)
+	@echo Building Elrond AMD64 Docker Image
+	@if [ -z "$(DOCKER_USERNAME)" ] || [ -z "$(DOCKER_PASSWORD)" ]; then \
+		echo "DOCKER_USERNAME and/or DOCKER_PASSWORD not set. Skipping Docker login."; \
+	else \
+		echo $(DOCKER_PASSWORD) | docker login --username $(DOCKER_USERNAME) --password-stdin; \
+	fi
+	docker buildx build \
+	--platform linux/amd64 \
+	--build-arg DOCKER_BUILD_IMAGE=$(DOCKER_BUILD_IMAGE) \
+	--build-arg DOCKER_BASE_IMAGE=$(DOCKER_BASE_IMAGE) \
+	. -f build/Dockerfile -t $(ELROND_IMAGE) \
+	--no-cache \
+	--push
+
+.PHONY: build-image-arm64
+build-image-arm64:  ## Build ARM64 docker image for Elrond (native build)
+	@echo Building Elrond ARM64 Docker Image
+	@if [ -z "$(DOCKER_USERNAME)" ] || [ -z "$(DOCKER_PASSWORD)" ]; then \
+		echo "DOCKER_USERNAME and/or DOCKER_PASSWORD not set. Skipping Docker login."; \
+	else \
+		echo $(DOCKER_PASSWORD) | docker login --username $(DOCKER_USERNAME) --password-stdin; \
+	fi
+	docker buildx build \
+	--platform linux/arm64 \
+	--build-arg DOCKER_BUILD_IMAGE=$(DOCKER_BUILD_IMAGE) \
+	--build-arg DOCKER_BASE_IMAGE=$(DOCKER_BASE_IMAGE) \
+	. -f build/Dockerfile -t $(ELROND_IMAGE) \
+	--no-cache \
+	--push
+
 .PHONY: scan
 scan:
 	docker scout cves $(ELROND_IMAGE)
@@ -209,4 +240,4 @@ $(GOPATH)/bin/golangci-lint: ## Install golangci-lint
 	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCILINT_VER)
 
 $(OUTDATED_GEN): ## Build go-mod-outdated.
-	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) github.com/psampaz/go-mod-outdated $(OUTDATED_BIN) $(OUTDATED_VER)
+	GOBIN=$(TOOLS_BIN_DIR) $(GO) install github.com/psampaz/go-mod-outdated@$(OUTDATED_VER)
