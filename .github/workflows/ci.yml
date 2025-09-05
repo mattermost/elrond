@@ -15,6 +15,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Keep compatibility with existing branch protection rules
+  test:
+    if: ${{ (github.event_name == 'pull_request' || github.ref_name  == 'main') && github.actor != 'dependabot[bot]' }}
+    uses: ./.github/workflows/.test.yml
+
+  # New efficient build jobs
   lint:
     runs-on: ubuntu-24.04
     steps:
@@ -28,27 +34,8 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: ci/check-style
-        run: make check-style
-
       - name: ci/check-modules  
         run: make check-modules
-
-  test:
-    runs-on: ubuntu-24.04
-    steps:
-      - name: ci/checkout-repo
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          fetch-depth: 0
-
-      - name: Setup Go
-        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
-        with:
-          go-version-file: go.mod
-
-      - name: ci/unit-test
-        run: make unittest
 
   # Build AMD64 image (fast native build)
   build-amd64:
